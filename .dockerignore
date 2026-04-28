@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.github
+*.log
+.env
+.env.local
+.env.*.local
+mongo_data/
+redis_data/
+coverage/
+.vitest-cache/

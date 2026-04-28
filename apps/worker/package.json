@@ -1,0 +1,26 @@
+{
+  "name": "@onchainme/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/worker.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/worker.js",
+    "dev": "tsx watch --env-file=../../.env.local src/worker.ts"
+  },
+  "dependencies": {
+    "@onchainme/shared": "workspace:*",
+    "bullmq": "^5.21.0",
+    "ioredis": "^5.4.1",
+    "mongoose": "^8.7.0",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

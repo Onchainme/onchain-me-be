@@ -1,0 +1,35 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# tests
+coverage/
+.vitest-cache/
+
+# docker
+mongo_data/
+redis_data/
+
+# secrets / keys
+*.pem
+*.key
+mint-authority.json

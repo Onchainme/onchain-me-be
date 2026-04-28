@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      # Single-node MongoDB replica set for transactions.
+      # We DON'T use GitHub's native services here because they don't allow
+      # post-start commands; we need to run rs.initiate(). So we run Mongo
+      # as a regular container in a step instead. See `Run mongo` step below.
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      LOG_LEVEL: warn
+      PORT: 3001
+      MONGODB_URI: mongodb://localhost:27017/onchainme?replicaSet=rs0
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci_secret_at_least_thirty_two_chars_xx
+      COOKIE_DOMAIN: localhost
+      HELIUS_API_KEY: ci_helius_key
+      HELIUS_WEBHOOK_SECRET: ci_secret
+      SOLANA_CLUSTER: devnet
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start MongoDB replica set
+        run: |
+          docker run -d --name mongo \
+            -p 27017:27017 \
+            mongo:7 \
+            --replSet rs0 --bind_ip_all
+          # Wait for mongo to be ready
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            docker exec mongo mongosh --quiet --eval "db.runCommand({ping: 1})" && break
+            sleep 2
+          done
+          # Initiate single-node replica set
+          docker exec mongo mongosh --quiet --eval "
+            rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]});
+          "
+          # Wait for it to become PRIMARY
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            STATE=$(docker exec mongo mongosh --quiet --eval "rs.status().myState" || echo "0")
+            if [ "$STATE" = "1" ]; then
+              echo "Mongo is PRIMARY"
+              break
+            fi
+            sleep 2
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm db:sync-indexes
+
+      - run: pnpm test
+
+      - run: pnpm build

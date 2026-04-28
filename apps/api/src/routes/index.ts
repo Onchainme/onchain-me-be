@@ -1,0 +1,20 @@
+import type { FastifyPluginAsync } from "fastify";
+import { healthRoute } from "./health.js";
+import { authRoute } from "./auth.js";
+import { scanRoute } from "./scan.js";
+import { landsRoute } from "./lands.js";
+import { placementsRoute } from "./placements.js";
+import { mintRoute } from "./mint.js";
+import { webhooksRoute } from "./webhooks.js";
+
+export const registerRoutes: FastifyPluginAsync = async (fastify) => {
+  await fastify.register(async (api) => {
+    await api.register(healthRoute);
+    await api.register(authRoute);
+    await api.register(scanRoute);
+    await api.register(landsRoute);
+    await api.register(placementsRoute);
+    await api.register(mintRoute);
+    await api.register(webhooksRoute);
+  }, { prefix: "/api/v1" });
+};

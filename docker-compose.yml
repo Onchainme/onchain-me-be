@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: onchainme-mongo
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27018"]
+    ports:
+      - "27018:27018"   # host:container — port 27018 chosen to avoid conflict
+                         # with other local mongo instances on default 27017.
+                         # internal port matches external so the replica set
+                         # member announces itself at localhost:27018, which
+                         # clients on the host can reach directly.
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      # First run: rs.status() throws → catch initiates a single-node replica set.
+      # Subsequent runs: rs.status() succeeds → no-op.
+      test: |
+        mongosh --port 27018 --quiet --eval "
+          try {
+            rs.status();
+          } catch (err) {
+            rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27018'}]});
+          }
+        "
+      interval: 5s
+      timeout: 30s
+      start_period: 0s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    container_name: onchainme-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mongo_data:
+  redis_data:

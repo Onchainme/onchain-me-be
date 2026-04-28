@@ -1,0 +1,43 @@
+{
+  "name": "@onchainme/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./db": "./dist/db/connect.js",
+    "./db/models": "./dist/db/models.js",
+    "./queue": "./dist/queue/connection.js",
+    "./env": "./dist/env.js",
+    "./errors": "./dist/errors.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "db:sync-indexes": "tsx --env-file=../../.env.local src/db/ensure-indexes.ts"
+  },
+  "dependencies": {
+    "@metaplex-foundation/mpl-bubblegum": "^5.0.2",
+    "@metaplex-foundation/umi": "^1.5.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.5.1",
+    "@sentry/node": "^10.50.0",
+    "@solana/web3.js": "^1.98.4",
+    "bs58": "^6.0.0",
+    "bullmq": "^5.21.0",
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1",
+    "jose": "^6.2.3",
+    "mongoose": "^8.7.0",
+    "tweetnacl": "^1.0.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "msw": "^2.13.6",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

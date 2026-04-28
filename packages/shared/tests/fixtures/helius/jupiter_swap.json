@@ -1,0 +1,30 @@
+{
+  "signature": "5xQpkX...JupiterSwap",
+  "slot": 250000000,
+  "timestamp": 1714000000,
+  "type": "SWAP",
+  "source": "JUPITER",
+  "fee": 5000,
+  "feePayer": "WALLET_ADDRESS_PLACEHOLDER",
+  "description": "WALLET_ADDRESS_PLACEHOLDER swapped 1 SOL for 100 USDC",
+  "events": {
+    "swap": {
+      "nativeInput": { "account": "WALLET_ADDRESS_PLACEHOLDER", "amount": "1000000000" },
+      "nativeOutput": null,
+      "tokenInputs": [],
+      "tokenOutputs": [
+        {
+          "userAccount": "WALLET_ADDRESS_PLACEHOLDER",
+          "tokenAccount": "T_USDC",
+          "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "rawTokenAmount": { "tokenAmount": "100000000", "decimals": 6 }
+        }
+      ],
+      "tokenFees": [],
+      "nativeFees": []
+    }
+  },
+  "tokenTransfers": [],
+  "nativeTransfers": [],
+  "transactionError": null
+}

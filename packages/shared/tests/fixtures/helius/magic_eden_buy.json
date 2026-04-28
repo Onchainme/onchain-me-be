@@ -1,0 +1,21 @@
+{
+  "signature": "5me_buy",
+  "slot": 250100000,
+  "timestamp": 1714010000,
+  "type": "NFT_SALE",
+  "source": "MAGIC_EDEN",
+  "fee": 5000,
+  "feePayer": "BUYER_WALLET",
+  "events": {
+    "nft": {
+      "type": "NFT_SALE",
+      "source": "MAGIC_EDEN",
+      "amount": 2500000000,
+      "buyer": "BUYER_WALLET",
+      "seller": "SELLER_WALLET",
+      "saleType": "INSTANT_SALE",
+      "nfts": [{ "mint": "M3T_MINT", "tokenStandard": "NonFungible" }]
+    }
+  },
+  "transactionError": null
+}

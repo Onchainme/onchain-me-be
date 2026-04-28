@@ -1,0 +1,56 @@
+{
+  "wallet": "PinnedWalletA1111111111111111111111111111111",
+  "transactions": [
+    {
+      "signature": "tx_jup_1",
+      "slot": 250000001,
+      "timestamp": 1714000001,
+      "type": "SWAP",
+      "source": "JUPITER",
+      "feePayer": "PinnedWalletA1111111111111111111111111111111",
+      "events": {
+        "swap": {
+          "nativeInput": { "account": "PinnedWalletA1111111111111111111111111111111", "amount": "1000000000" },
+          "nativeOutput": null,
+          "tokenInputs": [],
+          "tokenOutputs": [
+            {
+              "userAccount": "PinnedWalletA1111111111111111111111111111111",
+              "tokenAccount": "T_USDC",
+              "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+              "rawTokenAmount": { "tokenAmount": "100000000", "decimals": 6 }
+            }
+          ]
+        }
+      },
+      "transactionError": null
+    },
+    {
+      "signature": "tx_me_buy_1",
+      "slot": 250000002,
+      "timestamp": 1714000002,
+      "type": "NFT_SALE",
+      "source": "MAGIC_EDEN",
+      "events": {
+        "nft": {
+          "type": "NFT_SALE",
+          "buyer": "PinnedWalletA1111111111111111111111111111111",
+          "seller": "OTHERSELLER",
+          "amount": 2500000000,
+          "saleType": "INSTANT_SALE",
+          "nfts": [{ "mint": "MintA", "tokenStandard": "NonFungible" }]
+        }
+      },
+      "transactionError": null
+    },
+    {
+      "signature": "tx_unknown_1",
+      "slot": 250000003,
+      "timestamp": 1714000003,
+      "type": "UNKNOWN",
+      "source": "SYSTEM_PROGRAM",
+      "events": {},
+      "transactionError": null
+    }
+  ]
+}
