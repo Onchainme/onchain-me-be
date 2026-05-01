@@ -24,9 +24,12 @@ const userSchema = new Schema(
     lastScanCursor: String,
     refInviter: String,
     ogImageUrl: String,
+    score: { type: Number, default: 0 },
   },
   { _id: false, collection: "users" },
 );
+// leaderboard: sort by score desc, tiebreaker by wallet asc; rank lookup by score
+userSchema.index({ score: -1, _id: 1 });
 export type User = InferSchemaType<typeof userSchema> & { _id: string };
 export const User: Model<User> =
   (mongoose.models["User"] as Model<User> | undefined) ??

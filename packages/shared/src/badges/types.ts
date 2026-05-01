@@ -23,8 +23,14 @@ export interface BadgeEvalResult {
   meta: Record<string, unknown>;
 }
 
+export type BadgeTier = "common" | "rare" | "epic" | "legendary";
+
 export interface BadgeDef {
   id: BadgeId;
   weight: number;
+  name: string;
+  description: string;
+  iconUrl: string;
+  tier: BadgeTier;
   evaluate: (ctx: BadgeEvalContext) => BadgeEvalResult | null;
 }

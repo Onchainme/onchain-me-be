@@ -24,6 +24,9 @@ const ROUTES_REQUIRING_RESPONSES = [
   ["POST", "/api/v1/mint/all"],
   ["POST", "/api/v1/mint/confirm"],
   ["POST", "/api/v1/webhooks/helius"],
+  ["GET", "/api/v1/badges"],
+  ["GET", "/api/v1/feed"],
+  ["GET", "/api/v1/stats"],
 ] as const;
 
 describe("OpenAPI document", () => {

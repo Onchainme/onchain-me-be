@@ -1,30 +1,59 @@
 import { Buffer } from "node:buffer";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { AppError, ErrorCode, models, REGISTRY, score, type BadgeId } from "@onchainme/shared";
+import {
+  AppError,
+  ErrorCode,
+  getRank,
+  getRanks,
+  models,
+  REGISTRY,
+  score,
+  type BadgeId,
+} from "@onchainme/shared";
 import { errorEnvelopeSchema } from "../schemas/error-envelope.js";
 
 const walletParam = z.object({ wallet: z.string().min(32).max(64) });
 
+const sortParam = z.enum(["recent", "score"]).default("recent");
+
 const landsListQuery = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
+  sort: sortParam,
 });
 
-interface ListCursor {
+interface RecentCursor {
+  type: "recent";
   createdAt: string;
   wallet: string;
 }
 
-function encodeCursor(c: ListCursor): string {
+interface ScoreCursor {
+  type: "score";
+  score: number;
+  wallet: string;
+}
+
+type Cursor = RecentCursor | ScoreCursor;
+
+function encodeCursor(c: Cursor): string {
   return Buffer.from(JSON.stringify(c)).toString("base64url");
 }
 
-function decodeCursor(s: string): ListCursor | null {
+function decodeCursor(s: string): Cursor | null {
   try {
-    const parsed = JSON.parse(Buffer.from(s, "base64url").toString("utf8"));
-    if (typeof parsed?.createdAt !== "string" || typeof parsed?.wallet !== "string") return null;
-    return parsed as ListCursor;
+    const parsed = JSON.parse(Buffer.from(s, "base64url").toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    if (parsed["type"] === "recent" && typeof parsed["createdAt"] === "string" && typeof parsed["wallet"] === "string") {
+      return { type: "recent", createdAt: parsed["createdAt"], wallet: parsed["wallet"] };
+    }
+    if (parsed["type"] === "score" && typeof parsed["score"] === "number" && typeof parsed["wallet"] === "string") {
+      return { type: "score", score: parsed["score"], wallet: parsed["wallet"] };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -43,6 +72,8 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
                 wallet: z.string(),
                 ogImageUrl: z.string().nullable(),
                 objectsCount: z.number(),
+                score: z.number(),
+                rank: z.number(),
               }),
             ),
             nextCursor: z.string().nullable(),
@@ -51,20 +82,33 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
       },
     },
     async (req) => {
-      const { cursor, limit } = req.query;
+      const { cursor, limit, sort } = req.query;
       const filter: Record<string, unknown> = {};
-      if (cursor) {
-        const c = decodeCursor(cursor);
-        if (c) {
+      const decoded = cursor ? decodeCursor(cursor) : null;
+
+      // Build sort and filter based on selected mode. Cursor type must match sort,
+      // otherwise we ignore the (now-irrelevant) cursor and start from the top.
+      let sortSpec: Record<string, 1 | -1>;
+      if (sort === "score") {
+        sortSpec = { score: -1, _id: 1 };
+        if (decoded?.type === "score") {
           filter.$or = [
-            { createdAt: { $lt: new Date(c.createdAt) } },
-            { createdAt: new Date(c.createdAt), _id: { $lt: c.wallet } },
+            { score: { $lt: decoded.score } },
+            { score: decoded.score, _id: { $gt: decoded.wallet } },
+          ];
+        }
+      } else {
+        sortSpec = { createdAt: -1, _id: -1 };
+        if (decoded?.type === "recent") {
+          filter.$or = [
+            { createdAt: { $lt: new Date(decoded.createdAt) } },
+            { createdAt: new Date(decoded.createdAt), _id: { $lt: decoded.wallet } },
           ];
         }
       }
 
       const users = await models.User.find(filter)
-        .sort({ createdAt: -1, _id: -1 })
+        .sort(sortSpec)
         .limit(limit + 1)
         .lean();
 
@@ -79,20 +123,35 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
         : [];
       const countByWallet = new Map(placementCounts.map((c) => [c._id, c.count]));
 
-      const items = page.map((u) => ({
+      const scores = page.map((u) => (u["score"] as number | undefined) ?? 0);
+      const ranks = await getRanks(scores);
+
+      const items = page.map((u, i) => ({
         wallet: u._id as unknown as string,
         ogImageUrl: u["ogImageUrl"] ?? null,
         objectsCount: countByWallet.get(u._id as unknown as string) ?? 0,
+        score: scores[i] ?? 0,
+        rank: ranks[i] ?? 0,
       }));
 
       const last = page.at(-1);
-      const nextCursor =
-        users.length > limit && last
-          ? encodeCursor({
-              createdAt: (last["createdAt"] as Date).toISOString(),
-              wallet: last._id as unknown as string,
-            })
-          : null;
+      let nextCursor: string | null = null;
+      if (users.length > limit && last) {
+        const lastWallet = last._id as unknown as string;
+        if (sort === "score") {
+          nextCursor = encodeCursor({
+            type: "score",
+            score: (last["score"] as number | undefined) ?? 0,
+            wallet: lastWallet,
+          });
+        } else {
+          nextCursor = encodeCursor({
+            type: "recent",
+            createdAt: (last["createdAt"] as Date).toISOString(),
+            wallet: lastWallet,
+          });
+        }
+      }
 
       return { items, nextCursor };
     },
@@ -110,6 +169,7 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
               protocols: z.number(),
               transactions: z.number(),
               score: z.number(),
+              rank: z.number(),
             }),
             placements: z.array(
               z.object({
@@ -155,10 +215,17 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
         (c) => (c._id as unknown as { badgeId: BadgeId }).badgeId,
       );
 
+      // Compute score from claims (source of truth) and use the denormalized
+      // User.score for ranking. They should match in steady state, but we don't
+      // need to trust the cache for the user-facing number.
+      const computedScore = score(claimedIds);
+      const rank = await getRank(computedScore);
+
       const stats = {
         protocols: txAgg[0]?.protocols.length ?? 0,
         transactions: txAgg[0]?.transactions ?? 0,
-        score: score(claimedIds),
+        score: computedScore,
+        rank,
       };
 
       reply.header("Cache-Control", "public, max-age=30");

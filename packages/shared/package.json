@@ -17,7 +17,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "db:sync-indexes": "tsx --env-file=../../.env.local src/db/ensure-indexes.ts"
+    "db:sync-indexes": "tsx --env-file=../../.env.local src/db/ensure-indexes.ts",
+    "db:recompute-scores": "tsx --env-file=../../.env.local src/db/recompute-scores.ts"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-bubblegum": "^5.0.2",

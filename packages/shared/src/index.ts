@@ -20,10 +20,10 @@ export { fetchEnhancedTransactions, fetchAllTransactionsCappedAt } from "./heliu
 export type { HeliusEnhancedTx } from "./helius/schema.js";
 export { routeAndParse } from "./parsers/router.js";
 export type { NormalizedTx, ParseResult, ParserFn } from "./parsers/types.js";
-export { REGISTRY, ALL_BADGE_IDS, getBadge } from "./badges/registry.js";
+export { REGISTRY, ALL_BADGE_IDS, getBadge, definitionsArray } from "./badges/registry.js";
 export { evaluateAll } from "./badges/evaluate.js";
-export { score } from "./badges/scoring.js";
-export type { BadgeId, BadgeDef, BadgeEvalContext, BadgeEvalResult } from "./badges/types.js";
+export { score, getRank, getRanks } from "./badges/scoring.js";
+export type { BadgeId, BadgeDef, BadgeEvalContext, BadgeEvalResult, BadgeTier } from "./badges/types.js";
 export { loadMintAuthority, mintAuthorityPublicKey } from "./solana/keypair.js";
 export { getRpcConnection } from "./solana/connection.js";
 export { createUmiClient } from "./solana/umi.js";

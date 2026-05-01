@@ -103,6 +103,39 @@ describe("GET /api/v1/lands/:wallet", () => {
     expect(body.placements).toEqual([{ badgeId: "first_swap", x: 4, y: 7 }]);
     expect(body.ogImageUrl).toBe("https://example.com/og.png");
   });
+
+  it("returns rank=1 for the only ranked wallet and rank=0 for unranked", async () => {
+    await mongoose.connection.collection("users").insertOne({
+      _id: W as never,
+      createdAt: new Date(),
+      score: 25,
+    });
+    await mongoose.connection.collection("badgeClaims").insertOne({
+      _id: { walletAddress: W, badgeId: "jupiter_explorer" } as never,
+      mintedAt: new Date(),
+      mintSignature: "s",
+      assetId: "a",
+      merkleTree: "t",
+    });
+
+    const res = await app.inject({ method: "GET", url: `/api/v1/lands/${W}` });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { stats: { score: number; rank: number } };
+    expect(body.stats.score).toBe(25);
+    expect(body.stats.rank).toBe(1);
+
+    // a wallet with no claims gets rank 0 (unranked sentinel)
+    const W2 = "Z" + "z".repeat(43);
+    await mongoose.connection.collection("users").insertOne({
+      _id: W2 as never,
+      createdAt: new Date(),
+      score: 0,
+    });
+    const res2 = await app.inject({ method: "GET", url: `/api/v1/lands/${W2}` });
+    const body2 = JSON.parse(res2.body) as { stats: { score: number; rank: number } };
+    expect(body2.stats.score).toBe(0);
+    expect(body2.stats.rank).toBe(0);
+  });
 });
 
 describe("GET /api/v1/lands (home grid)", () => {
@@ -114,12 +147,12 @@ describe("GET /api/v1/lands (home grid)", () => {
     expect(body.nextCursor).toBeNull();
   });
 
-  it("returns wallets newest-first with placement count and og preview", async () => {
+  it("returns wallets newest-first with placement count, og preview, score and rank", async () => {
     const wA = "WALLetA" + "1".repeat(38);
     const wB = "WALLetB" + "2".repeat(38);
     await mongoose.connection.collection("users").insertMany([
-      { _id: wA as never, createdAt: new Date("2026-01-01"), ogImageUrl: "ogA" },
-      { _id: wB as never, createdAt: new Date("2026-02-01"), ogImageUrl: "ogB" },
+      { _id: wA as never, createdAt: new Date("2026-01-01"), ogImageUrl: "ogA", score: 10 },
+      { _id: wB as never, createdAt: new Date("2026-02-01"), ogImageUrl: "ogB", score: 50 },
     ]);
     await mongoose.connection.collection("placements").insertMany([
       { _id: { walletAddress: wB, badgeId: "first_swap" } as never, tileX: 0, tileY: 0, placedAt: new Date() },
@@ -129,12 +162,59 @@ describe("GET /api/v1/lands (home grid)", () => {
     const res = await app.inject({ method: "GET", url: "/api/v1/lands?limit=10" });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as {
-      items: { wallet: string; ogImageUrl: string | null; objectsCount: number }[];
+      items: {
+        wallet: string;
+        ogImageUrl: string | null;
+        objectsCount: number;
+        score: number;
+        rank: number;
+      }[];
       nextCursor: string | null;
     };
     expect(body.items.map((i) => i.wallet)).toEqual([wB, wA]);
     expect(body.items[0]?.objectsCount).toBe(2);
     expect(body.items[1]?.objectsCount).toBe(0);
+    expect(body.items[0]?.score).toBe(50);
+    expect(body.items[1]?.score).toBe(10);
+    // wB has higher score → rank 1, wA → rank 2
+    expect(body.items[0]?.rank).toBe(1);
+    expect(body.items[1]?.rank).toBe(2);
+  });
+
+  it("sort=score orders by score desc and paginates by score-cursor", async () => {
+    const wA = "Sa" + "a".repeat(42);
+    const wB = "Sb" + "b".repeat(42);
+    const wC = "Sc" + "c".repeat(42);
+    await mongoose.connection.collection("users").insertMany([
+      { _id: wA as never, createdAt: new Date("2026-01-01"), score: 20 },
+      { _id: wB as never, createdAt: new Date("2026-02-01"), score: 100 },
+      { _id: wC as never, createdAt: new Date("2026-03-01"), score: 60 },
+    ]);
+
+    const first = await app.inject({
+      method: "GET",
+      url: "/api/v1/lands?sort=score&limit=2",
+    });
+    const firstBody = JSON.parse(first.body) as {
+      items: { wallet: string; score: number; rank: number }[];
+      nextCursor: string | null;
+    };
+    expect(firstBody.items.map((i) => i.wallet)).toEqual([wB, wC]);
+    expect(firstBody.items.map((i) => i.score)).toEqual([100, 60]);
+    expect(firstBody.items.map((i) => i.rank)).toEqual([1, 2]);
+    expect(firstBody.nextCursor).toBeTruthy();
+
+    const second = await app.inject({
+      method: "GET",
+      url: `/api/v1/lands?sort=score&limit=2&cursor=${encodeURIComponent(firstBody.nextCursor!)}`,
+    });
+    const secondBody = JSON.parse(second.body) as {
+      items: { wallet: string; score: number; rank: number }[];
+      nextCursor: string | null;
+    };
+    expect(secondBody.items.map((i) => i.wallet)).toEqual([wA]);
+    expect(secondBody.items[0]?.rank).toBe(3);
+    expect(secondBody.nextCursor).toBeNull();
   });
 
   it("paginates via cursor", async () => {

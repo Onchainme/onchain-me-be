@@ -10,6 +10,8 @@ import {
   isMintDegraded,
   loadEnv,
   models,
+  REGISTRY,
+  type BadgeId,
 } from "@onchainme/shared";
 
 const singleBody = z.object({ badgeId: z.string().min(1).max(64) });
@@ -209,6 +211,16 @@ export const mintRoute: FastifyPluginAsyncZod = async (fastify) => {
           merkleTree: env.MERKLE_TREE_ADDRESS,
           mintedAt: new Date(),
         });
+        // Denormalized score: increment by the badge's weight so the leaderboard
+        // doesn't need to aggregate BadgeClaim on every read.
+        const weight = REGISTRY[badgeId as BadgeId]?.weight ?? 0;
+        if (weight > 0) {
+          await models.User.updateOne(
+            { _id: wallet },
+            { $inc: { score: weight }, $setOnInsert: { createdAt: new Date() } },
+            { upsert: true },
+          );
+        }
         addMintAudit({ wallet, badgeId, action: "confirm" });
         return {
           badgeId,
