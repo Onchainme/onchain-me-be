@@ -9,6 +9,9 @@ import { webhooksRoute } from "./webhooks.js";
 import { badgesRoute } from "./badges.js";
 import { feedRoute } from "./feed.js";
 import { statsRoute } from "./stats.js";
+import { metadataRoute } from "./metadata.js";
+import { devRoute } from "./dev.js";
+import { importRoute } from "./import.js";
 
 export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(async (api) => {
@@ -22,5 +25,8 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
     await api.register(badgesRoute);
     await api.register(feedRoute);
     await api.register(statsRoute);
+    await api.register(metadataRoute);
+    await api.register(devRoute);
+    await api.register(importRoute);
   }, { prefix: "/api/v1" });
 };

@@ -7,6 +7,7 @@ import {
   ErrorCode,
   buildMintTransaction,
   fetchTransactionStatus,
+  getAssetsByOwner,
   isMintDegraded,
   loadEnv,
   models,
@@ -20,6 +21,59 @@ const confirmBody = z.object({
   signature: z.string().min(1).max(128),
   badgeId: z.string().min(1).max(64),
 });
+
+const NAME_PREFIX = "OnchainMe — ";
+
+/**
+ * DAS-backed sanity check: even when our DB is empty, an on-chain cNFT under
+ * our merkle tree with a matching name means the wallet already owns this
+ * badge. Backfills BadgeClaim and treats the request as already-claimed.
+ *
+ * Adds ~500ms per mint request, so we only call it AFTER cheap DB checks pass.
+ */
+async function backfillFromOnChain(
+  wallet: string,
+  badgeId: string,
+  merkleTree: string,
+): Promise<boolean> {
+  let assets;
+  try {
+    assets = await getAssetsByOwner(wallet);
+  } catch {
+    // DAS hiccup shouldn't block a legitimate mint; skip the on-chain check.
+    return false;
+  }
+  const expectedName = `${NAME_PREFIX}${badgeId}`;
+  const match = assets.find(
+    (a) =>
+      a.compression?.compressed === true &&
+      a.compression?.tree === merkleTree &&
+      a.content?.metadata?.name === expectedName,
+  );
+  if (!match) return false;
+
+  try {
+    await models.BadgeClaim.create({
+      _id: { walletAddress: wallet, badgeId },
+      mintSignature: `imported:${match.id}`,
+      assetId: match.id,
+      merkleTree,
+      mintedAt: new Date(),
+    });
+    const weight = REGISTRY[badgeId as BadgeId]?.weight ?? 0;
+    if (weight > 0) {
+      await models.User.updateOne(
+        { _id: wallet },
+        { $inc: { score: weight }, $setOnInsert: { createdAt: new Date() } },
+        { upsert: true },
+      );
+    }
+  } catch (err) {
+    // Race with concurrent /import or /mint/confirm — treat as backfilled.
+    if ((err as { code?: number }).code !== 11000) throw err;
+  }
+  return true;
+}
 
 async function ensureClaimable(wallet: string, badgeId: string): Promise<void> {
   const eligible = await models.BadgeEligibility.findOne({
@@ -41,6 +95,18 @@ async function ensureClaimable(wallet: string, badgeId: string): Promise<void> {
     throw new AppError({
       code: ErrorCode.BADGE_ALREADY_CLAIMED,
       message: `${badgeId} is already claimed`,
+      statusCode: 409,
+    });
+  }
+
+  // Defense-in-depth: scan on-chain. Catches DB-only resets that would
+  // otherwise let a wallet mint duplicates of the same badge.
+  const env = loadEnv();
+  const onChainHit = await backfillFromOnChain(wallet, badgeId, env.MERKLE_TREE_ADDRESS);
+  if (onChainHit) {
+    throw new AppError({
+      code: ErrorCode.BADGE_ALREADY_CLAIMED,
+      message: `${badgeId} already exists on-chain — backfilled`,
       statusCode: 409,
     });
   }

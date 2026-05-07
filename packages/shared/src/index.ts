@@ -34,6 +34,8 @@ export type { BuildMintInput, BuildMintResult } from "./mint/prepare.js";
 export { fetchTransactionStatus } from "./mint/confirm.js";
 export type { ConfirmedTxStatus } from "./mint/confirm.js";
 export { isMintDegraded, setMintDegraded, clearMintDegraded } from "./mint/degraded.js";
+export { getAssetsByOwner } from "./das/client.js";
+export type { DasAsset, DasGetAssetsByOwnerResult } from "./das/client.js";
 export { verifyHeliusSecret } from "./webhook/verify.js";
 export { initSentry, isSentryEnabled, captureException } from "./observability/sentry.js";
 export { addParserWarning, addMintAudit } from "./observability/breadcrumbs.js";
