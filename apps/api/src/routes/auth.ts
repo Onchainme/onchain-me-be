@@ -195,8 +195,25 @@ export const authRoute: FastifyPluginAsyncZod = async (fastify) => {
       },
       preHandler: fastify.requireAuth,
     },
-    async (_req, reply) => {
-      reply.clearCookie("om_session", { path: "/" });
+    async (req, reply) => {
+      // Browser only deletes a cookie if Set-Cookie attributes (domain + path)
+      // match what was used at write time. Without `domain` the clear silently
+      // no-ops when the original cookie was set with Domain=<COOKIE_DOMAIN>.
+      const apiHost = ((req.headers.host ?? "").split(":")[0]) ?? "";
+      const frontendUrl = new URL(env.FRONTEND_ORIGIN);
+      const crossSite =
+        frontendUrl.hostname !== apiHost &&
+        !apiHost.endsWith(`.${env.COOKIE_DOMAIN}`) &&
+        apiHost !== env.COOKIE_DOMAIN;
+      const sameSite: "lax" | "none" = crossSite ? "none" : "lax";
+      const secure = sameSite === "none" || env.NODE_ENV === "production";
+
+      reply.clearCookie("om_session", {
+        path: "/",
+        secure,
+        sameSite,
+        ...(env.COOKIE_DOMAIN !== "localhost" && { domain: env.COOKIE_DOMAIN }),
+      });
       return reply.code(204).send(null);
     },
   );
