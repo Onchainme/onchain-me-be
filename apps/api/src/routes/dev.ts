@@ -7,7 +7,10 @@ const seedBody = z.object({ badgeId: z.string().min(1).max(64) });
 
 export const devRoute: FastifyPluginAsyncZod = async (fastify) => {
   const env = loadEnv();
-  if (env.NODE_ENV !== "development") return;
+  // Exposed when either NODE_ENV is development (local) or the explicit
+  // ALLOW_DEV_ROUTES flag is set (alpha/devnet prod). Routes still require
+  // a session cookie via fastify.requireAuth.
+  if (env.NODE_ENV !== "development" && !env.ALLOW_DEV_ROUTES) return;
 
   fastify.post(
     "/dev/seed-eligibility",

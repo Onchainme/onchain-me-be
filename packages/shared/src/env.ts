@@ -31,6 +31,16 @@ const envSchema = z.object({
   ).default(""),
   ADMIN_BASIC_AUTH: z.string().regex(/^[^:]+:[^:]+$/, "ADMIN_BASIC_AUTH must be user:pass").optional().default("admin:change_me"),
   SERVICE_VERSION: z.string().default("dev"),
+
+  // Expose POST /api/v1/dev/seed-eligibility[+all] outside of NODE_ENV=development.
+  // Routes still go through fastify.requireAuth so a wallet can only seed its own
+  // eligibility. Use this on alpha/devnet deploys where you keep NODE_ENV=production
+  // but still want to bootstrap user inventories without a real Helius scan.
+  ALLOW_DEV_ROUTES: z
+    .union([z.literal("true"), z.literal("false"), z.literal("")])
+    .optional()
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;
