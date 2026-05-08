@@ -1,0 +1,125 @@
+# Production compose for a single-VPS Hetzner deployment.
+#
+# Run from the backend repo root:
+#   docker compose -f deploy/docker-compose.prod.yml \
+#                  --env-file deploy/.env.production \
+#                  up -d --build
+#
+# Assumes `onchain-me` (frontend) is checked out side-by-side at ../onchain-me
+# (see deploy/README.md for the directory layout).
+#
+# Public surface:
+#   - api.<DOMAIN>  -> Caddy -> api:3001
+#   - app.<DOMAIN>  -> Caddy -> frontend:3000
+# Mongo + Redis are reachable only inside the docker network (no host ports).
+
+name: onchainme
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-loglimit: &loglimit
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  mongo:
+    image: mongo:7
+    <<: [*restart, *loglimit]
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      # First run: rs.status() throws -> initiate single-node replica set.
+      # Subsequent runs: rs.status() succeeds -> no-op.
+      test: |
+        mongosh --port 27017 --quiet --eval "
+          try {
+            rs.status();
+          } catch (err) {
+            rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]});
+          }
+        "
+      interval: 10s
+      timeout: 30s
+      start_period: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    <<: [*restart, *loglimit]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: [*restart, *loglimit]
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env.production
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3001"
+
+  worker:
+    <<: [*restart, *loglimit]
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    env_file:
+      - .env.production
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    <<: [*restart, *loglimit]
+    build:
+      # Sibling checkout: ~/projects/onchain-me-be + ~/projects/onchain-me
+      context: ../../onchain-me
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* values are baked at build time. Read from .env.production.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    <<: [*restart, *loglimit]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - frontend
+
+volumes:
+  mongo_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,39 @@
+# Caddy v2 config for OnchainMe.
+#
+# Caddy automatically obtains and renews Let's Encrypt certificates for any
+# host that resolves to this server. Make sure DNS A-records for
+# api.<DOMAIN> and app.<DOMAIN> point to the VPS IP BEFORE the first start.
+
+{
+	email {$CADDY_ACME_EMAIL}
+	# Comment out the next line if you want production LE certs from day one.
+	# Useful while testing DNS to avoid hitting LE's strict rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+api.{$DOMAIN} {
+	encode zstd gzip
+
+	# Trust X-Forwarded-* from Caddy itself so Fastify rate-limit / req.ip
+	# see the real client IP rather than the docker network address.
+	@any {
+		not path /admin/queues/*
+	}
+
+	reverse_proxy api:3001 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+app.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}
+
+# Optional bare-domain redirect to the app subdomain. Comment out if you serve
+# something else on the apex (e.g. a marketing page).
+{$DOMAIN} {
+	redir https://app.{$DOMAIN}{uri}
+}
