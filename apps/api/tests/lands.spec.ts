@@ -74,14 +74,14 @@ describe("GET /api/v1/lands/:wallet", () => {
       },
     ]);
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: W, badgeId: "first_swap" } as never,
+      _id: { walletAddress: W, badgeId: "jupiter_volume_bronze" } as never,
       mintedAt: new Date(),
       mintSignature: "msig",
       assetId: "aid",
       merkleTree: "tree",
     });
     await mongoose.connection.collection("placements").insertOne({
-      _id: { walletAddress: W, badgeId: "first_swap" } as never,
+      _id: { walletAddress: W, badgeId: "jupiter_volume_bronze" } as never,
       tileX: 4,
       tileY: 7,
       placedAt: new Date(),
@@ -99,8 +99,8 @@ describe("GET /api/v1/lands/:wallet", () => {
     expect(body.wallet).toBe(W);
     expect(body.stats.transactions).toBe(2);
     expect(body.stats.protocols).toBe(2);
-    expect(body.stats.score).toBe(10); // first_swap weight
-    expect(body.placements).toEqual([{ badgeId: "first_swap", x: 4, y: 7 }]);
+    expect(body.stats.score).toBe(10); // jupiter_volume_bronze weight
+    expect(body.placements).toEqual([{ badgeId: "jupiter_volume_bronze", x: 4, y: 7 }]);
     expect(body.ogImageUrl).toBe("https://example.com/og.png");
   });
 
@@ -111,7 +111,7 @@ describe("GET /api/v1/lands/:wallet", () => {
       score: 25,
     });
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: W, badgeId: "jupiter_explorer" } as never,
+      _id: { walletAddress: W, badgeId: "jupiter_volume_silver" } as never,
       mintedAt: new Date(),
       mintSignature: "s",
       assetId: "a",
@@ -155,7 +155,7 @@ describe("GET /api/v1/lands (home grid)", () => {
       { _id: wB as never, createdAt: new Date("2026-02-01"), ogImageUrl: "ogB", score: 50 },
     ]);
     await mongoose.connection.collection("placements").insertMany([
-      { _id: { walletAddress: wB, badgeId: "first_swap" } as never, tileX: 0, tileY: 0, placedAt: new Date() },
+      { _id: { walletAddress: wB, badgeId: "jupiter_volume_bronze" } as never, tileX: 0, tileY: 0, placedAt: new Date() },
       { _id: { walletAddress: wB, badgeId: "first_nft" } as never, tileX: 1, tileY: 0, placedAt: new Date() },
     ]);
 
@@ -261,13 +261,13 @@ describe("GET /api/v1/lands/:wallet/inventory", () => {
     const { wallet, cookie } = await login();
 
     await mongoose.connection.collection("badgeEligibilities").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_swap" } as never,
+      _id: { walletAddress: wallet, badgeId: "jupiter_volume_bronze" } as never,
       evaluatedAt: new Date(),
       eligibleSince: new Date("2026-01-01"),
       meta: { count: 5, threshold: 1 },
     });
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_nft" } as never,
+      _id: { walletAddress: wallet, badgeId: "pumpfun_volume_bronze" } as never,
       mintedAt: new Date(),
       mintSignature: "msig",
       assetId: "aid",
@@ -285,9 +285,9 @@ describe("GET /api/v1/lands/:wallet/inventory", () => {
       eligible: { badgeId: string; weight: number; eligibleSince: string; meta: unknown }[];
     };
     expect(body.claimed).toEqual([
-      { badgeId: "first_nft", weight: 10, assetId: "aid" },
+      { badgeId: "pumpfun_volume_bronze", weight: 10, assetId: "aid" },
     ]);
-    expect(body.eligible[0]?.badgeId).toBe("first_swap");
+    expect(body.eligible[0]?.badgeId).toBe("jupiter_volume_bronze");
     expect(body.eligible[0]?.weight).toBe(10);
     expect(body.eligible[0]?.meta).toMatchObject({ count: 5 });
   });
@@ -295,13 +295,13 @@ describe("GET /api/v1/lands/:wallet/inventory", () => {
   it("excludes from eligible anything already claimed", async () => {
     const { wallet, cookie } = await login();
     await mongoose.connection.collection("badgeEligibilities").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_swap" } as never,
+      _id: { walletAddress: wallet, badgeId: "jupiter_volume_bronze" } as never,
       evaluatedAt: new Date(),
       eligibleSince: new Date("2026-01-01"),
       meta: {},
     });
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_swap" } as never,
+      _id: { walletAddress: wallet, badgeId: "jupiter_volume_bronze" } as never,
       mintedAt: new Date(),
       mintSignature: "msig",
       assetId: "aid",

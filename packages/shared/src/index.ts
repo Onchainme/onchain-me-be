@@ -23,7 +23,21 @@ export type { NormalizedTx, ParseResult, ParserFn } from "./parsers/types.js";
 export { REGISTRY, ALL_BADGE_IDS, getBadge, definitionsArray } from "./badges/registry.js";
 export { evaluateAll } from "./badges/evaluate.js";
 export { score, getRank, getRanks } from "./badges/scoring.js";
-export type { BadgeId, BadgeDef, BadgeEvalContext, BadgeEvalResult, BadgeTier } from "./badges/types.js";
+export type {
+  BadgeId,
+  BadgeDef,
+  BadgeEvalContext,
+  BadgeEvalResult,
+  BadgeTier,
+  BadgeProtocol,
+} from "./badges/types.js";
+export { getUsdPrices, usdValue, _resetPriceCache } from "./prices/jupiter.js";
+export {
+  getOrcaPositionsUsd,
+  getMeteoraPositionsUsd,
+  hasSeekerGenesisNft,
+  SEEKER_GENESIS_MINT,
+} from "./positions/index.js";
 export { loadMintAuthority, mintAuthorityPublicKey } from "./solana/keypair.js";
 export { getRpcConnection } from "./solana/connection.js";
 export { createUmiClient } from "./solana/umi.js";

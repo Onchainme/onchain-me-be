@@ -1,10 +1,12 @@
 import type { ParserFn, ParseResult } from "./types.js";
 import type { HeliusEnhancedTx } from "../helius/schema.js";
 import { parseJupiterSwap } from "./jupiter.js";
+import { parsePumpfunSwap } from "./pumpfun.js";
 import { parseMagicEden } from "./magicEden.js";
 
 const PARSERS: Record<string, ParserFn | undefined> = {
   JUPITER: parseJupiterSwap,
+  PUMP_FUN: parsePumpfunSwap,
   MAGIC_EDEN: parseMagicEden,
 };
 

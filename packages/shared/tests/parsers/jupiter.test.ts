@@ -17,8 +17,10 @@ describe("parseJupiterSwap", () => {
 
   it("captures input/output mints and amounts in meta", () => {
     const r = parseJupiterSwap(jupiterFixture as never, WALLET);
+    // v2: native SOL legs are emitted as the canonical wrapped-SOL mint so
+    // the price-lookup module can resolve a USD price uniformly.
     expect(r.normalized?.meta).toMatchObject({
-      inputMint: "SOL",
+      inputMint: "So11111111111111111111111111111111111111112",
       outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       outputAmount: "100000000",
       outputDecimals: 6,

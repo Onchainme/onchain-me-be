@@ -26,13 +26,15 @@ function setEnv(base: string) {
 describe("buildMetadataUri", () => {
   it("appends /<badgeId>.json to the base url", () => {
     setEnv("https://onchainme.xyz/metadata");
-    expect(buildMetadataUri("first_swap")).toBe("https://onchainme.xyz/metadata/first_swap.json");
+    expect(buildMetadataUri("jupiter_volume_bronze")).toBe(
+      "https://onchainme.xyz/metadata/jupiter_volume_bronze.json",
+    );
   });
 
   it("strips a trailing slash on the base url", () => {
     setEnv("https://onchainme.xyz/metadata/");
-    expect(buildMetadataUri("nft_collector")).toBe(
-      "https://onchainme.xyz/metadata/nft_collector.json",
+    expect(buildMetadataUri("seeker_genesis")).toBe(
+      "https://onchainme.xyz/metadata/seeker_genesis.json",
     );
   });
 });
@@ -42,13 +44,23 @@ describe("buildMetadataArgs", () => {
     setEnv("https://onchainme.xyz/metadata");
   });
 
-  it("produces a MetadataArgs-compatible shape with uri, name, symbol, sellerFeeBasisPoints", () => {
-    const m = buildMetadataArgs("first_swap");
-    expect(m.uri).toBe("https://onchainme.xyz/metadata/first_swap.json");
-    expect(m.name).toBe("OnchainMe — first_swap");
+  it("uses the registry display name for `name` (≤ 32 bytes, Metaplex limit)", () => {
+    // v2: on-chain name is the registry's short display name, not the
+    // legacy "OnchainMe — <badgeId>" format (which overflowed 32 bytes
+    // for new ids like meteora_position_original).
+    const m = buildMetadataArgs("jupiter_volume_bronze");
+    expect(m.name).toBe("Jupiter $1k");
+    expect(m.name.length).toBeLessThanOrEqual(32);
     expect(m.symbol).toBe("OCM");
+    expect(m.uri).toBe("https://onchainme.xyz/metadata/jupiter_volume_bronze.json");
     expect(m.sellerFeeBasisPoints).toBe(0);
     expect(m.creators).toEqual([]);
     expect(m.isMutable).toBe(false);
+  });
+
+  it("falls back to the raw badgeId when the registry has no entry", () => {
+    // Forward-compat: e.g. legacy cNFT replay or future ids we haven't shipped yet.
+    const m = buildMetadataArgs("legacy_or_future_badge");
+    expect(m.name).toBe("legacy_or_future_badge");
   });
 });

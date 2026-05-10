@@ -22,12 +22,16 @@ const confirmBody = z.object({
   badgeId: z.string().min(1).max(64),
 });
 
-const NAME_PREFIX = "OnchainMe — ";
+// Legacy on-chain name format used before badge-system v2 (when ids fit in
+// 32 bytes). Kept as a fallback so detect-and-import still recognises old
+// mints.
+const LEGACY_NAME_PREFIX = "OnchainMe — ";
 
 /**
  * DAS-backed sanity check: even when our DB is empty, an on-chain cNFT under
- * our merkle tree with a matching name means the wallet already owns this
- * badge. Backfills BadgeClaim and treats the request as already-claimed.
+ * our merkle tree with a matching badge id (recovered from the off-chain
+ * `json_uri` path) means the wallet already owns this badge. Backfills
+ * BadgeClaim and treats the request as already-claimed.
  *
  * Adds ~500ms per mint request, so we only call it AFTER cheap DB checks pass.
  */
@@ -43,13 +47,25 @@ async function backfillFromOnChain(
     // DAS hiccup shouldn't block a legitimate mint; skip the on-chain check.
     return false;
   }
-  const expectedName = `${NAME_PREFIX}${badgeId}`;
-  const match = assets.find(
-    (a) =>
-      a.compression?.compressed === true &&
-      a.compression?.tree === merkleTree &&
-      a.content?.metadata?.name === expectedName,
-  );
+  const legacyExpectedName = `${LEGACY_NAME_PREFIX}${badgeId}`;
+  const match = assets.find((a) => {
+    if (a.compression?.compressed !== true) return false;
+    if (a.compression?.tree !== merkleTree) return false;
+    // v2: recover badgeId from json_uri path (e.g. .../metadata/<id>.json)
+    const uri = a.content?.json_uri;
+    if (uri) {
+      try {
+        const { pathname } = new URL(uri);
+        const last = pathname.split("/").filter(Boolean).pop() ?? "";
+        const candidate = last.endsWith(".json") ? last.slice(0, -".json".length) : last;
+        if (candidate === badgeId) return true;
+      } catch {
+        // fall through to legacy name check
+      }
+    }
+    // v1 legacy fallback
+    return a.content?.metadata?.name === legacyExpectedName;
+  });
   if (!match) return false;
 
   try {

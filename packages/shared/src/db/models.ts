@@ -2,7 +2,7 @@ import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 
 // ---------- shared types ----------
 
-export type Protocol = "jupiter" | "magic_eden" | "meteora" | "other";
+export type Protocol = "jupiter" | "pumpfun" | "magic_eden" | "meteora" | "orca" | "other";
 export type TxAction =
   | "swap"
   | "nft_buy"
@@ -10,6 +10,17 @@ export type TxAction =
   | "nft_list"
   | "lp_deposit"
   | "lp_withdraw";
+
+// Per-protocol cumulative volume + checkpoint for incremental scans.
+const protocolVolumeSubSchema = new Schema(
+  {
+    usd: { type: Number, default: 0 },
+    // Newest tx signature we've already counted. Subsequent scans
+    // fetch enhanced txs with `until: lastTxSig` and add to `usd`.
+    lastTxSig: { type: String, default: null },
+  },
+  { _id: false },
+);
 export type ScanMode = "full" | "incremental";
 export type ScanStatus = "queued" | "running" | "done" | "failed";
 
@@ -25,6 +36,34 @@ const userSchema = new Schema(
     refInviter: String,
     ogImageUrl: String,
     score: { type: Number, default: 0 },
+
+    // Cumulative USD volume per swap protocol, with checkpoint sig so the
+    // worker only counts newly-discovered txs on each rescan.
+    protocolVolume: {
+      type: new Schema(
+        {
+          jupiter: { type: protocolVolumeSubSchema, default: () => ({}) },
+          pumpfun: { type: protocolVolumeSubSchema, default: () => ({}) },
+        },
+        { _id: false },
+      ),
+      default: () => ({}),
+    },
+
+    // Point-in-time snapshot of LP positions / NFT holdings refreshed on each
+    // scan (no historical accumulation — current state only).
+    positionSnapshot: {
+      type: new Schema(
+        {
+          orcaUsd: { type: Number, default: 0 },
+          meteoraUsd: { type: Number, default: 0 },
+          seekerHeld: { type: Boolean, default: false },
+          takenAt: Date,
+        },
+        { _id: false },
+      ),
+      default: () => ({}),
+    },
   },
   { _id: false, collection: "users" },
 );
@@ -84,7 +123,7 @@ const txSchema = new Schema(
     blockTime: { type: Date, required: true },
     protocol: {
       type: String,
-      enum: ["jupiter", "magic_eden", "meteora", "other"],
+      enum: ["jupiter", "pumpfun", "magic_eden", "meteora", "orca", "other"],
       required: true,
     },
     action: {
@@ -93,6 +132,9 @@ const txSchema = new Schema(
       required: true,
     },
     amountUsd: Number,
+    // USD value of this single tx, computed via price-lookup on the bigger leg
+    // of a swap (max(inputUsd, outputUsd)). Used by the volume-tier badges.
+    volumeUsd: { type: Number, default: null },
     meta: Schema.Types.Mixed,
   },
   { _id: false, collection: "txs" },

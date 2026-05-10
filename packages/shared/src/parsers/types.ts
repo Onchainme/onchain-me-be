@@ -8,6 +8,11 @@ export interface NormalizedTx {
   protocol: Protocol;
   action: TxAction;
   amountUsd: number | null;
+  /**
+   * USD value of this single tx, computed by the worker via Jupiter Price API
+   * after parsing. Set to null by parsers; populated later in the scan flow.
+   */
+  volumeUsd: number | null;
   meta: Record<string, unknown>;
 }
 

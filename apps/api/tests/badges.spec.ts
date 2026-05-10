@@ -11,7 +11,7 @@ afterAll(async () => {
 });
 
 describe("GET /api/v1/badges", () => {
-  it("returns the full badge catalog", async () => {
+  it("returns the full v2 badge catalog (13 protocol-tiered badges)", async () => {
     const res = await app.inject({ method: "GET", url: "/api/v1/badges" });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as {
@@ -19,31 +19,47 @@ describe("GET /api/v1/badges", () => {
         id: string;
         name: string;
         description: string;
-        iconUrl: string;
+        protocol: string;
         tier: string;
+        thresholdUsd: number | null;
         weight: number;
+        previewFile: string;
+        animationFile: string;
       }[];
     };
-    expect(body.items).toHaveLength(10);
+    expect(body.items).toHaveLength(13);
     for (const it of body.items) {
       expect(it.id.length).toBeGreaterThan(0);
       expect(it.name.length).toBeGreaterThan(0);
-      expect(it.description.length).toBeGreaterThan(0);
-      expect(it.iconUrl).toMatch(/\.svg$/);
-      expect(["common", "rare", "epic", "legendary"]).toContain(it.tier);
+      expect(["jupiter", "pumpfun", "orca", "meteora", "seeker"]).toContain(it.protocol);
+      expect(["bronze", "silver", "original", "single"]).toContain(it.tier);
+      expect(it.previewFile.endsWith(".png")).toBe(true);
+      expect(it.animationFile.endsWith(".gif")).toBe(true);
       expect(it.weight).toBeGreaterThan(0);
     }
   });
 
-  it("includes the well-known first_swap badge with the expected weight", async () => {
+  it("includes the bronze Jupiter volume badge with $1k threshold", async () => {
     const res = await app.inject({ method: "GET", url: "/api/v1/badges" });
     const body = JSON.parse(res.body) as {
-      items: { id: string; weight: number; tier: string }[];
+      items: { id: string; protocol: string; tier: string; thresholdUsd: number | null }[];
     };
-    const firstSwap = body.items.find((b) => b.id === "first_swap");
-    expect(firstSwap).toBeDefined();
-    expect(firstSwap?.weight).toBe(10);
-    expect(firstSwap?.tier).toBe("common");
+    const bronze = body.items.find((b) => b.id === "jupiter_volume_bronze");
+    expect(bronze).toBeDefined();
+    expect(bronze?.protocol).toBe("jupiter");
+    expect(bronze?.tier).toBe("bronze");
+    expect(bronze?.thresholdUsd).toBe(1_000);
+  });
+
+  it("seeker_genesis has no threshold (single-tier badge)", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/v1/badges" });
+    const body = JSON.parse(res.body) as {
+      items: { id: string; tier: string; thresholdUsd: number | null }[];
+    };
+    const seeker = body.items.find((b) => b.id === "seeker_genesis");
+    expect(seeker).toBeDefined();
+    expect(seeker?.tier).toBe("single");
+    expect(seeker?.thresholdUsd).toBeNull();
   });
 
   it("sets a long Cache-Control", async () => {

@@ -20,6 +20,7 @@ export const parseMagicEden: ParserFn = (tx, wallet) => {
       protocol: "magic_eden",
       action: isBuy ? "nft_buy" : "nft_sell",
       amountUsd: null,
+      volumeUsd: null,
       meta: {
         mint,
         counterparty,

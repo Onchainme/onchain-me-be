@@ -5,7 +5,12 @@ export type ConfirmedTxStatus =
   | { status: "failed"; signature: string; err: unknown }
   | { status: "not_found"; signature: string };
 
-const ASSET_ID_LOG_RE = /AssetId:\s+([1-9A-HJ-NP-Za-km-z]{32,44})/;
+// Bubblegum's MintV1 emits a program log of the form:
+//   "Program log: Leaf asset ID: <base58 pubkey>"
+// (note: spaced & lowercase). We also keep the legacy "AssetId:" form as a
+// fallback in case a future Bubblegum version changes the wording back.
+const ASSET_ID_LOG_RE =
+  /(?:Leaf\s+asset\s+ID|asset\s*ID|AssetId):\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i;
 
 /**
  * Fetch a transaction's status and parse the AssetId from program logs.

@@ -17,12 +17,55 @@ describe("routeAndParse", () => {
   });
 
   it("dispatches Jupiter SWAP to jupiter parser", () => {
+    // The v2 parser needs at least one identifiable leg belonging to the
+    // wallet — provide a minimal native-input leg so the dispatcher succeeds.
     const result = routeAndParse(
-      { ...baseTx, source: "JUPITER", type: "SWAP", events: { swap: {} } } as never,
+      {
+        ...baseTx,
+        source: "JUPITER",
+        type: "SWAP",
+        events: {
+          swap: {
+            nativeInput: { account: "WAL", amount: "100000" },
+            tokenOutputs: [
+              {
+                userAccount: "WAL",
+                mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                rawTokenAmount: { tokenAmount: "1000", decimals: 6 },
+              },
+            ],
+          },
+        },
+      } as never,
       "WAL",
     );
     expect(result.normalized).not.toBeNull();
     expect(result.normalized?.protocol).toBe("jupiter");
+  });
+
+  it("dispatches Pump.fun SWAP to pumpfun parser (new protocol)", () => {
+    const result = routeAndParse(
+      {
+        ...baseTx,
+        source: "PUMP_FUN",
+        type: "SWAP",
+        events: {
+          swap: {
+            nativeInput: { account: "WAL", amount: "5000000" },
+            tokenOutputs: [
+              {
+                userAccount: "WAL",
+                mint: "SomePumpfunMint11111111111111111111111111111",
+                rawTokenAmount: { tokenAmount: "1000000", decimals: 6 },
+              },
+            ],
+          },
+        },
+      } as never,
+      "WAL",
+    );
+    expect(result.normalized).not.toBeNull();
+    expect(result.normalized?.protocol).toBe("pumpfun");
   });
 
   it("dispatches Magic Eden NFT_SALE to magic_eden parser", () => {

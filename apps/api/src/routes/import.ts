@@ -10,12 +10,43 @@ import {
 } from "@onchainme/shared";
 import { errorEnvelopeSchema } from "../schemas/error-envelope.js";
 
-const NAME_PREFIX = "OnchainMe — ";
+/**
+ * Extract the badgeId from a DAS asset.
+ *
+ * On-chain `metadata.name` is too short to carry the full id (Metaplex limit
+ * is 32 bytes; "OnchainMe — meteora_position_original" overflows), so we now
+ * embed the display name there ("Jupiter $10k", etc.) and recover the id from
+ * the off-chain `json_uri` instead. Our URIs look like:
+ *
+ *   https://api.<DOMAIN>/api/v1/metadata/<badgeId>.json
+ *   https://api.<DOMAIN>/api/v1/metadata/<badgeId>            (no .json suffix)
+ *
+ * As a fallback for old cNFTs minted before this change, we also try to
+ * match the legacy `OnchainMe — <badgeId>` name format.
+ */
+const LEGACY_NAME_PREFIX = "OnchainMe — ";
 
-function badgeIdFromName(name: string | undefined): BadgeId | null {
+function badgeIdFromUri(uri: string | undefined): BadgeId | null {
+  if (!uri) return null;
+  try {
+    const { pathname } = new URL(uri);
+    const segments = pathname.split("/").filter(Boolean);
+    let last = segments[segments.length - 1];
+    if (!last) return null;
+    if (last.endsWith(".json")) last = last.slice(0, -".json".length);
+    if ((ALL_BADGE_IDS as readonly string[]).includes(last)) {
+      return last as BadgeId;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function badgeIdFromLegacyName(name: string | undefined): BadgeId | null {
   if (!name) return null;
-  if (!name.startsWith(NAME_PREFIX)) return null;
-  const candidate = name.slice(NAME_PREFIX.length).trim();
+  if (!name.startsWith(LEGACY_NAME_PREFIX)) return null;
+  const candidate = name.slice(LEGACY_NAME_PREFIX.length).trim();
   if ((ALL_BADGE_IDS as readonly string[]).includes(candidate)) {
     return candidate as BadgeId;
   }
@@ -57,7 +88,9 @@ export const importRoute: FastifyPluginAsyncZod = async (fastify) => {
       // (oldest by leaf_id ascending) so the on-chain "original" wins.
       const byBadge = new Map<BadgeId, { assetId: string; leafId: number }>();
       for (const asset of ours) {
-        const badgeId = badgeIdFromName(asset.content?.metadata?.name);
+        const badgeId =
+          badgeIdFromUri(asset.content?.json_uri) ??
+          badgeIdFromLegacyName(asset.content?.metadata?.name);
         if (!badgeId) continue;
         const leafId = asset.compression?.leaf_id ?? Number.MAX_SAFE_INTEGER;
         const existing = byBadge.get(badgeId);

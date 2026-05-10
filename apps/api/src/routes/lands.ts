@@ -264,6 +264,15 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
                 meta: z.record(z.string(), z.unknown()),
               }),
             ),
+            // When the worker last finished a scan for this wallet. null if
+            // the user has never been scanned (fresh signup). Frontend uses
+            // it to render a "Last scanned X ago" indicator.
+            lastScanAt: z.date().nullable(),
+            // When position-snapshot (Orca / Meteora / Seeker) data was
+            // refreshed. May lag lastScanAt by a few seconds — but in normal
+            // flow they're equal because both are written at the end of one
+            // scan job.
+            positionsTakenAt: z.date().nullable(),
           }),
           401: errorEnvelopeSchema,
           403: errorEnvelopeSchema,
@@ -274,9 +283,10 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
     async (req) => {
       const { wallet } = req.params;
 
-      const [claims, eligibilities] = await Promise.all([
+      const [claims, eligibilities, user] = await Promise.all([
         models.BadgeClaim.find({ "_id.walletAddress": wallet }).lean(),
         models.BadgeEligibility.find({ "_id.walletAddress": wallet }).lean(),
+        models.User.findById(wallet).lean(),
       ]);
 
       const claimedIds = new Set(
@@ -304,7 +314,13 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
           };
         });
 
-      return { claimed, eligible };
+      const lastScanAt = (user?.["lastScanAt"] as Date | null | undefined) ?? null;
+      const positionSnapshot = user?.["positionSnapshot"] as
+        | { takenAt?: Date | null }
+        | undefined;
+      const positionsTakenAt = positionSnapshot?.takenAt ?? null;
+
+      return { claimed, eligible, lastScanAt, positionsTakenAt };
     },
   );
 };

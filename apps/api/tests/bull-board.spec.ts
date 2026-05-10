@@ -27,11 +27,14 @@ describe("GET /admin/queues", () => {
   });
 
   it("returns 200 with correct credentials", async () => {
-    // .env.local sets ADMIN_BASIC_AUTH=admin:local (per Task 1 step 2)
+    // Read whatever ADMIN_BASIC_AUTH the test process inherited from
+    // .env.local (or env.ts's default "admin:change_me"). Reading from env
+    // instead of hardcoding lets the test pass on any local config.
+    const auth = process.env.ADMIN_BASIC_AUTH ?? "admin:change_me";
     const res = await app.inject({
       method: "GET",
       url: "/admin/queues",
-      headers: { authorization: "Basic " + Buffer.from("admin:local").toString("base64") },
+      headers: { authorization: "Basic " + Buffer.from(auth).toString("base64") },
     });
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain("<title>"); // Bull-Board renders an HTML page

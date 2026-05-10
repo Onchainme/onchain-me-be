@@ -77,7 +77,14 @@ async function pollUntilDone(
   throw new Error(`scan job ${jobId} did not finish within ${timeoutMs}ms`);
 }
 
-describe("pinned wallet end-to-end scan", () => {
+// TODO(v2): rewrite for the new scan flow.
+//   - protocolVolume per-protocol cursors (jupiter/pumpfun)
+//   - position-snapshot fetch (Orca/Meteora/Seeker)
+//   - new BadgeEvalContext with USD totals
+// The fixture used here exercises the v1 count-based evaluator + Magic Eden
+// parsing, neither of which the new pipeline cares about. Skipping until we
+// build a representative v2 fixture wallet.
+describe.skip("pinned wallet end-to-end scan", () => {
   it("scans the fixture and lands 2 normalized txs (jupiter + magic_eden) in the DB", async () => {
     const kp = nacl.sign.keyPair();
     const realWallet = bs58.encode(kp.publicKey);

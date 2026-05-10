@@ -75,7 +75,7 @@ describe("POST /api/v1/mint/single", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/v1/mint/single",
-      payload: { badgeId: "first_swap" },
+      payload: { badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(401);
   });
@@ -86,7 +86,7 @@ describe("POST /api/v1/mint/single", () => {
       method: "POST",
       url: "/api/v1/mint/single",
       headers: { cookie },
-      payload: { badgeId: "first_swap" },
+      payload: { badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(422);
     expect(JSON.parse(res.body).error.code).toBe("BADGE_NOT_ELIGIBLE");
@@ -94,9 +94,9 @@ describe("POST /api/v1/mint/single", () => {
 
   it("returns 409 BADGE_ALREADY_CLAIMED if a claim row exists", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_swap" } as never,
+      _id: { walletAddress: wallet, badgeId: "jupiter_volume_bronze" } as never,
       mintedAt: new Date(),
       mintSignature: "old",
       assetId: "old_aid",
@@ -106,7 +106,7 @@ describe("POST /api/v1/mint/single", () => {
       method: "POST",
       url: "/api/v1/mint/single",
       headers: { cookie },
-      payload: { badgeId: "first_swap" },
+      payload: { badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(409);
     expect(JSON.parse(res.body).error.code).toBe("BADGE_ALREADY_CLAIMED");
@@ -114,13 +114,13 @@ describe("POST /api/v1/mint/single", () => {
 
   it("returns 503 MINT_AUTHORITY_OUT_OF_FUNDS when degraded flag is set", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
     await setMintDegraded("test forced", 60);
     const res = await app.inject({
       method: "POST",
       url: "/api/v1/mint/single",
       headers: { cookie },
-      payload: { badgeId: "first_swap" },
+      payload: { badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(503);
     expect(JSON.parse(res.body).error.code).toBe("MINT_AUTHORITY_OUT_OF_FUNDS");
@@ -128,7 +128,7 @@ describe("POST /api/v1/mint/single", () => {
 
   it("returns a base64 transaction when eligible and not claimed", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
 
     // Mock the Solana RPC blockhash call that buildMintTransaction triggers.
     server.use(
@@ -155,7 +155,7 @@ describe("POST /api/v1/mint/single", () => {
       method: "POST",
       url: "/api/v1/mint/single",
       headers: { cookie },
-      payload: { badgeId: "first_swap" },
+      payload: { badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as {
@@ -163,7 +163,7 @@ describe("POST /api/v1/mint/single", () => {
       badgeId: string;
       expiresAt: string;
     };
-    expect(body.badgeId).toBe("first_swap");
+    expect(body.badgeId).toBe("jupiter_volume_bronze");
     expect(body.transaction.length).toBeGreaterThan(100);
     expect(new Date(body.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
@@ -174,14 +174,14 @@ describe("POST /api/v1/mint/confirm", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/v1/mint/confirm",
-      payload: { signature: "sigX", badgeId: "first_swap" },
+      payload: { signature: "sigX", badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(401);
   });
 
   it("writes a claim and returns alreadyClaimed=false on a successful tx", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
 
     server.use(
       http.post(/.*/, () =>
@@ -204,7 +204,7 @@ describe("POST /api/v1/mint/confirm", () => {
       method: "POST",
       url: "/api/v1/mint/confirm",
       headers: { cookie },
-      payload: { signature: "sigOK", badgeId: "first_swap" },
+      payload: { signature: "sigOK", badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as {
@@ -218,10 +218,10 @@ describe("POST /api/v1/mint/confirm", () => {
 
     const row = await mongoose.connection
       .collection("badgeClaims")
-      .findOne({ "_id.walletAddress": wallet, "_id.badgeId": "first_swap" });
+      .findOne({ "_id.walletAddress": wallet, "_id.badgeId": "jupiter_volume_bronze" });
     expect(row?.["mintSignature"]).toBe("sigOK");
 
-    // The denormalized User.score should have been bumped by first_swap.weight (10).
+    // The denormalized User.score should have been bumped by jupiter_volume_bronze.weight (10).
     const userRow = await mongoose.connection
       .collection("users")
       .findOne({ _id: wallet as never });
@@ -230,9 +230,9 @@ describe("POST /api/v1/mint/confirm", () => {
 
   it("is idempotent — second call returns alreadyClaimed=true and does not overwrite", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_swap" } as never,
+      _id: { walletAddress: wallet, badgeId: "jupiter_volume_bronze" } as never,
       mintedAt: new Date("2026-01-01"),
       mintSignature: "sigOriginal",
       assetId: "AID_ORIG",
@@ -260,7 +260,7 @@ describe("POST /api/v1/mint/confirm", () => {
       method: "POST",
       url: "/api/v1/mint/confirm",
       headers: { cookie },
-      payload: { signature: "sigSecond", badgeId: "first_swap" },
+      payload: { signature: "sigSecond", badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as { alreadyClaimed: boolean; assetId: string };
@@ -270,7 +270,7 @@ describe("POST /api/v1/mint/confirm", () => {
 
   it("returns 422 TX_FAILED when meta.err is set", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
 
     server.use(
       http.post(/.*/, () =>
@@ -290,7 +290,7 @@ describe("POST /api/v1/mint/confirm", () => {
       method: "POST",
       url: "/api/v1/mint/confirm",
       headers: { cookie },
-      payload: { signature: "sigFail", badgeId: "first_swap" },
+      payload: { signature: "sigFail", badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(422);
     expect(JSON.parse(res.body).error.code).toBe("TX_FAILED");
@@ -308,7 +308,7 @@ describe("POST /api/v1/mint/confirm", () => {
       method: "POST",
       url: "/api/v1/mint/confirm",
       headers: { cookie },
-      payload: { signature: "sigGhost", badgeId: "first_swap" },
+      payload: { signature: "sigGhost", badgeId: "jupiter_volume_bronze" },
     });
     expect(res.statusCode).toBe(422);
     expect(JSON.parse(res.body).error.code).toBe("TX_NOT_FOUND");
@@ -318,11 +318,11 @@ describe("POST /api/v1/mint/confirm", () => {
 describe("POST /api/v1/mint/all", () => {
   it("returns one transaction per eligible-but-unclaimed badge", async () => {
     const { wallet, cookie } = await loggedInWallet();
-    await makeEligible(wallet, "first_swap");
+    await makeEligible(wallet, "jupiter_volume_bronze");
     await makeEligible(wallet, "first_nft");
     // Already claimed — should not appear in the response
     await mongoose.connection.collection("badgeClaims").insertOne({
-      _id: { walletAddress: wallet, badgeId: "first_swap" } as never,
+      _id: { walletAddress: wallet, badgeId: "jupiter_volume_bronze" } as never,
       mintedAt: new Date(),
       mintSignature: "old",
       assetId: "old_aid",

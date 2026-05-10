@@ -6,9 +6,12 @@ const badgeSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  iconUrl: z.string(),
-  tier: z.enum(["common", "rare", "epic", "legendary"]),
+  protocol: z.enum(["jupiter", "pumpfun", "orca", "meteora", "seeker"]),
+  tier: z.enum(["bronze", "silver", "original", "single"]),
+  thresholdUsd: z.number().nullable(),
   weight: z.number(),
+  previewFile: z.string(),
+  animationFile: z.string(),
 });
 
 export const badgesRoute: FastifyPluginAsyncZod = async (fastify) => {
@@ -30,9 +33,12 @@ export const badgesRoute: FastifyPluginAsyncZod = async (fastify) => {
         id: def.id,
         name: def.name,
         description: def.description,
-        iconUrl: def.iconUrl,
+        protocol: def.protocol,
         tier: def.tier,
+        thresholdUsd: def.thresholdUsd,
         weight: def.weight,
+        previewFile: def.previewFile,
+        animationFile: def.animationFile,
       }));
       return { items };
     },

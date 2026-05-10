@@ -11,8 +11,14 @@ const metadataSchema = z.object({
   symbol: z.string(),
   description: z.string(),
   image: z.string(),
+  animation_url: z.string().optional(),
   external_url: z.string().optional(),
-  attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })),
+  attributes: z.array(
+    z.object({
+      trait_type: z.string(),
+      value: z.union([z.string(), z.number()]),
+    }),
+  ),
   properties: z.object({
     files: z.array(z.object({ uri: z.string(), type: z.string() })),
     category: z.string(),
@@ -41,21 +47,28 @@ export const metadataRoute: FastifyPluginAsyncZod = async (fastify) => {
 
       const proto = req.headers["x-forwarded-proto"] ?? (req.protocol as string);
       const host = req.headers["x-forwarded-host"] ?? req.headers.host;
-      const baseImage = `${proto}://${host}${def.iconUrl}`;
+      const origin = `${proto}://${host}`;
+      const imageUrl = `${origin}/badges/${def.previewFile}`;
+      const animationUrl = `${origin}/badges/${def.animationFile}`;
 
       reply.header("Cache-Control", "public, max-age=300");
       return {
         name: def.name,
         symbol: "OCM",
         description: def.description,
-        image: baseImage,
-        external_url: `https://onchain.me/badge/${badgeId}`,
+        image: imageUrl,
+        animation_url: animationUrl,
+        external_url: `https://onchainme.to/badge/${badgeId}`,
         attributes: [
+          { trait_type: "Protocol", value: def.protocol },
           { trait_type: "Tier", value: def.tier },
-          { trait_type: "Weight", value: def.weight },
+          { trait_type: "Threshold USD", value: def.thresholdUsd ?? 0 },
         ],
         properties: {
-          files: [{ uri: baseImage, type: "image/svg+xml" }],
+          files: [
+            { uri: imageUrl, type: "image/png" },
+            { uri: animationUrl, type: "image/gif" },
+          ],
           category: "image",
         },
       };

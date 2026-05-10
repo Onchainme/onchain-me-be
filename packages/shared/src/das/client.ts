@@ -4,6 +4,8 @@ export interface DasAsset {
   id: string;
   interface: string;
   content?: {
+    /** Off-chain metadata URI — e.g. https://api.onchainme.to/api/v1/metadata/<badgeId>.json */
+    json_uri?: string;
     metadata?: {
       name?: string;
       symbol?: string;

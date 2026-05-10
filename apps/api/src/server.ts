@@ -1,4 +1,7 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
+import fastifyStatic from "@fastify/static";
 import { type ZodTypeProvider, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { connectDb, initSentry, loadEnv } from "@onchainme/shared";
 import { registerRoutes } from "./routes/index.js";
@@ -10,6 +13,8 @@ import { authPlugin } from "./plugins/auth.js";
 import { rateLimitPlugin } from "./plugins/rate-limit.js";
 import { basicAuthPlugin } from "./plugins/basic-auth.js";
 import { bullBoardPlugin } from "./plugins/bull-board.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function buildServer(): Promise<FastifyInstance> {
   const env = loadEnv();
@@ -30,6 +35,19 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(requestIdPlugin);
   await app.register(errorEnvelopePlugin);
   await app.register(corsPlugin);
+
+  // Serve badge GIF/PNG assets directly from disk. In dev tsc emits to
+  // apps/api/dist/, so the public dir sits one level up at apps/api/public.
+  // In Docker we COPY the same public/ tree into /app/apps/api/public.
+  const publicRoot = path.resolve(__dirname, "..", "public");
+  await app.register(fastifyStatic, {
+    root: publicRoot,
+    prefix: "/",                 // serves /badges/<name>.gif
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: "1h",
+  });
+
   await app.register(authPlugin);
   await app.register(rateLimitPlugin);
   await app.register(basicAuthPlugin);
