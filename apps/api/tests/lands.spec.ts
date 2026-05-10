@@ -99,7 +99,7 @@ describe("GET /api/v1/lands/:wallet", () => {
     expect(body.wallet).toBe(W);
     expect(body.stats.transactions).toBe(2);
     expect(body.stats.protocols).toBe(2);
-    expect(body.stats.score).toBe(10); // jupiter_volume_bronze weight
+    expect(body.stats.score).toBe(100); // jupiter_volume_bronze weight
     expect(body.placements).toEqual([{ badgeId: "jupiter_volume_bronze", x: 4, y: 7 }]);
     expect(body.ogImageUrl).toBe("https://example.com/og.png");
   });
@@ -108,7 +108,7 @@ describe("GET /api/v1/lands/:wallet", () => {
     await mongoose.connection.collection("users").insertOne({
       _id: W as never,
       createdAt: new Date(),
-      score: 25,
+      score: 250,
     });
     await mongoose.connection.collection("badgeClaims").insertOne({
       _id: { walletAddress: W, badgeId: "jupiter_volume_silver" } as never,
@@ -121,7 +121,7 @@ describe("GET /api/v1/lands/:wallet", () => {
     const res = await app.inject({ method: "GET", url: `/api/v1/lands/${W}` });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as { stats: { score: number; rank: number } };
-    expect(body.stats.score).toBe(25);
+    expect(body.stats.score).toBe(250);
     expect(body.stats.rank).toBe(1);
 
     // a wallet with no claims gets rank 0 (unranked sentinel)
@@ -285,10 +285,10 @@ describe("GET /api/v1/lands/:wallet/inventory", () => {
       eligible: { badgeId: string; weight: number; eligibleSince: string; meta: unknown }[];
     };
     expect(body.claimed).toEqual([
-      { badgeId: "pumpfun_volume_bronze", weight: 10, assetId: "aid" },
+      { badgeId: "pumpfun_volume_bronze", weight: 100, assetId: "aid" },
     ]);
     expect(body.eligible[0]?.badgeId).toBe("jupiter_volume_bronze");
-    expect(body.eligible[0]?.weight).toBe(10);
+    expect(body.eligible[0]?.weight).toBe(100);
     expect(body.eligible[0]?.meta).toMatchObject({ count: 5 });
   });
 

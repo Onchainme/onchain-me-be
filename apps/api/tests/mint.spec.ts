@@ -221,11 +221,11 @@ describe("POST /api/v1/mint/confirm", () => {
       .findOne({ "_id.walletAddress": wallet, "_id.badgeId": "jupiter_volume_bronze" });
     expect(row?.["mintSignature"]).toBe("sigOK");
 
-    // The denormalized User.score should have been bumped by jupiter_volume_bronze.weight (10).
+    // The denormalized User.score should have been bumped by jupiter_volume_bronze.weight (100).
     const userRow = await mongoose.connection
       .collection("users")
       .findOne({ _id: wallet as never });
-    expect(userRow?.["score"]).toBe(10);
+    expect(userRow?.["score"]).toBe(100);
   });
 
   it("is idempotent — second call returns alreadyClaimed=true and does not overwrite", async () => {

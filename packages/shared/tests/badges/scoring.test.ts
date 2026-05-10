@@ -8,9 +8,9 @@ describe("score", () => {
   });
 
   it("sums known badge weights from the v2 registry", () => {
-    const bronze = REGISTRY.jupiter_volume_bronze.weight; // 10
-    const silver = REGISTRY.jupiter_volume_silver.weight; // 25
-    const seeker = REGISTRY.seeker_genesis.weight;        // 50
+    const bronze = REGISTRY.jupiter_volume_bronze.weight; // 100
+    const silver = REGISTRY.jupiter_volume_silver.weight; // 250
+    const seeker = REGISTRY.seeker_genesis.weight;        // 500
     expect(score(["jupiter_volume_bronze", "jupiter_volume_silver"])).toBe(bronze + silver);
     expect(score(["seeker_genesis"])).toBe(seeker);
   });

@@ -7,10 +7,13 @@ import type {
   BadgeTier,
 } from "./types.js";
 
+// Tier weights tuned for end-user "points": bronze 100 / silver 250 /
+// original 1000. Same scale applies to both volume tiers (Jupiter/Pump.fun)
+// and position tiers (Orca/Meteora) so a $10k holder = $10k swapper.
 const VOLUME_TIERS = [
-  { tier: "bronze" as const, usd: 1_000, weight: 10 },
-  { tier: "silver" as const, usd: 10_000, weight: 25 },
-  { tier: "original" as const, usd: 100_000, weight: 75 },
+  { tier: "bronze" as const, usd: 1_000, weight: 100 },
+  { tier: "silver" as const, usd: 10_000, weight: 250 },
+  { tier: "original" as const, usd: 100_000, weight: 1000 },
 ];
 
 function volumeBadge(
@@ -79,7 +82,9 @@ const seekerBadge: BadgeDef = {
   id: "seeker_genesis",
   protocol: "seeker",
   tier: "single",
-  weight: 50,
+  // Sits between silver (250) and original (1000) — Seeker is rare but not
+  // as heavyweight as a $100k position.
+  weight: 500,
   name: "Seeker Genesis",
   description: "Holds the Solana Mobile Seeker Genesis Token.",
   previewFile: "seeker.png",
