@@ -87,8 +87,8 @@ const seekerBadge: BadgeDef = {
   weight: 500,
   name: "Seeker Genesis",
   description: "Holds the Solana Mobile Seeker Genesis Token.",
-  previewFile: "seeker.png",
-  animationFile: "seeker.gif",
+  previewFile: "seeker.webp",
+  animationFile: "seeker.webp",
   thresholdUsd: null,
   evaluate: (ctx) =>
     ctx.seekerHeld
@@ -104,7 +104,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[0]!.usd,
     VOLUME_TIERS[0]!.weight,
     { name: "Jupiter $1k", description: "Cumulative Jupiter swap volume of at least $1,000." },
-    { previewFile: "bronze-cat.png", animationFile: "bronze-cat.gif" },
+    { previewFile: "bronze-cat.png", animationFile: "bronze-cat.png" },
   ),
   jupiter_volume_silver: volumeBadge(
     "jupiter_volume_silver",
@@ -113,7 +113,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[1]!.usd,
     VOLUME_TIERS[1]!.weight,
     { name: "Jupiter $10k", description: "Cumulative Jupiter swap volume of at least $10,000." },
-    { previewFile: "silver-cat.png", animationFile: "silver-cat.gif" },
+    { previewFile: "silver-cat.png", animationFile: "silver-cat.png" },
   ),
   jupiter_volume_original: volumeBadge(
     "jupiter_volume_original",
@@ -122,7 +122,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[2]!.usd,
     VOLUME_TIERS[2]!.weight,
     { name: "Jupiter $100k", description: "Cumulative Jupiter swap volume of at least $100,000." },
-    { previewFile: "cat.png", animationFile: "cat.gif" },
+    { previewFile: "cat.png", animationFile: "cat.webp" },
   ),
 
   pumpfun_volume_bronze: volumeBadge(
@@ -132,7 +132,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[0]!.usd,
     VOLUME_TIERS[0]!.weight,
     { name: "Pump.fun $1k", description: "Cumulative Pump.fun trade volume of at least $1,000." },
-    { previewFile: "bronze-pill.png", animationFile: "bronze-pill.gif" },
+    { previewFile: "bronze-pill.png", animationFile: "bronze-pill.png" },
   ),
   pumpfun_volume_silver: volumeBadge(
     "pumpfun_volume_silver",
@@ -141,7 +141,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[1]!.usd,
     VOLUME_TIERS[1]!.weight,
     { name: "Pump.fun $10k", description: "Cumulative Pump.fun trade volume of at least $10,000." },
-    { previewFile: "silver-pill.png", animationFile: "silver-pill.gif" },
+    { previewFile: "silver-pill.png", animationFile: "silver-pill.png" },
   ),
   pumpfun_volume_original: volumeBadge(
     "pumpfun_volume_original",
@@ -150,7 +150,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[2]!.usd,
     VOLUME_TIERS[2]!.weight,
     { name: "Pump.fun $100k", description: "Cumulative Pump.fun trade volume of at least $100,000." },
-    { previewFile: "pill.png", animationFile: "pill.gif" },
+    { previewFile: "pill.png", animationFile: "pill.png" },
   ),
 
   orca_position_bronze: positionBadge(
@@ -160,7 +160,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[0]!.usd,
     VOLUME_TIERS[0]!.weight,
     { name: "Orca $1k", description: "Holding an Orca LP position worth at least $1,000." },
-    { previewFile: "bronze-orca.png", animationFile: "bronze-orca.gif" },
+    { previewFile: "bronze-orca.png", animationFile: "bronze-orca.png" },
   ),
   orca_position_silver: positionBadge(
     "orca_position_silver",
@@ -169,7 +169,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[1]!.usd,
     VOLUME_TIERS[1]!.weight,
     { name: "Orca $10k", description: "Holding an Orca LP position worth at least $10,000." },
-    { previewFile: "silver-orca.png", animationFile: "silver-orca.gif" },
+    { previewFile: "silver-orca.png", animationFile: "silver-orca.png" },
   ),
   orca_position_original: positionBadge(
     "orca_position_original",
@@ -178,7 +178,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[2]!.usd,
     VOLUME_TIERS[2]!.weight,
     { name: "Orca $100k", description: "Holding an Orca LP position worth at least $100,000." },
-    { previewFile: "orca.png", animationFile: "orca.gif" },
+    { previewFile: "orca.png", animationFile: "orca.png" },
   ),
 
   meteora_position_bronze: positionBadge(
@@ -188,7 +188,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[0]!.usd,
     VOLUME_TIERS[0]!.weight,
     { name: "Meteora $1k", description: "Holding a Meteora LP position worth at least $1,000." },
-    { previewFile: "bronze-meteor.png", animationFile: "bronze-meteor.gif" },
+    { previewFile: "bronze-meteora.png", animationFile: "bronze-meteora.png" },
   ),
   meteora_position_silver: positionBadge(
     "meteora_position_silver",
@@ -197,7 +197,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[1]!.usd,
     VOLUME_TIERS[1]!.weight,
     { name: "Meteora $10k", description: "Holding a Meteora LP position worth at least $10,000." },
-    { previewFile: "silver-meteor.png", animationFile: "silver-meteor.gif" },
+    { previewFile: "silver-meteora.png", animationFile: "silver-meteora.png" },
   ),
   meteora_position_original: positionBadge(
     "meteora_position_original",
@@ -206,7 +206,7 @@ export const REGISTRY: Record<BadgeId, BadgeDef> = {
     VOLUME_TIERS[2]!.usd,
     VOLUME_TIERS[2]!.weight,
     { name: "Meteora $100k", description: "Holding a Meteora LP position worth at least $100,000." },
-    { previewFile: "meteor.png", animationFile: "meteor.gif" },
+    { previewFile: "meteora.png", animationFile: "meteora.png" },
   ),
 
   seeker_genesis: seekerBadge,

@@ -66,8 +66,8 @@ export const metadataRoute: FastifyPluginAsyncZod = async (fastify) => {
         ],
         properties: {
           files: [
-            { uri: imageUrl, type: "image/png" },
-            { uri: animationUrl, type: "image/gif" },
+            { uri: imageUrl, type: def.previewFile.endsWith(".webp") ? "image/webp" : "image/png" },
+            { uri: animationUrl, type: def.animationFile.endsWith(".webp") ? "image/webp" : "image/png" },
           ],
           category: "image",
         },
