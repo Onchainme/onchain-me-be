@@ -19,6 +19,7 @@ function setBaseEnv(extras: Record<string, string> = {}) {
   process.env.HELIUS_API_KEY = "test-key";
   process.env.HELIUS_WEBHOOK_SECRET = "secret";
   process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
+  process.env.CREATOR_ADDRESS = "11111111111111111111111111111113";
   process.env.METADATA_BASE_URL = "https://example.com/metadata";
   Object.assign(process.env, extras);
 }

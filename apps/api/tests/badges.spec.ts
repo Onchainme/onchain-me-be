@@ -33,8 +33,11 @@ describe("GET /api/v1/badges", () => {
       expect(it.name.length).toBeGreaterThan(0);
       expect(["jupiter", "pumpfun", "orca", "meteora", "seeker"]).toContain(it.protocol);
       expect(["bronze", "silver", "original", "single"]).toContain(it.tier);
-      expect(it.previewFile.endsWith(".png")).toBe(true);
-      expect(it.animationFile.endsWith(".gif")).toBe(true);
+      // PR #1 introduced WebP and static-PNG animationFile variants — accept
+      // any common image extension; specific encoding is an asset concern.
+      const ALLOWED = [".png", ".webp", ".jpg", ".jpeg", ".gif"];
+      expect(ALLOWED.some((ext) => it.previewFile.endsWith(ext))).toBe(true);
+      expect(ALLOWED.some((ext) => it.animationFile.endsWith(ext))).toBe(true);
       expect(it.weight).toBeGreaterThan(0);
     }
   });

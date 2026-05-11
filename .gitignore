@@ -33,3 +33,4 @@ redis_data/
 *.pem
 *.key
 mint-authority.json
+.secrets/

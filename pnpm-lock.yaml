@@ -145,6 +145,9 @@ importers:
       '@metaplex-foundation/mpl-bubblegum':
         specifier: ^5.0.2
         version: 5.0.2(@metaplex-foundation/umi@1.5.1)
+      '@metaplex-foundation/mpl-toolbox':
+        specifier: ^0.10.0
+        version: 0.10.0(@metaplex-foundation/umi@1.5.1)
       '@metaplex-foundation/umi':
         specifier: ^1.5.1
         version: 1.5.1
@@ -2626,6 +2629,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vite-node@2.1.9:

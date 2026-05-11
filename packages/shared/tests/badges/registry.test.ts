@@ -40,11 +40,16 @@ describe("REGISTRY (v2: protocol-tiered)", () => {
     expect(REGISTRY.seeker_genesis.tier).toBe("single");
   });
 
-  it("each badge has matching previewFile + animationFile paths", () => {
+  it("each badge has plausible image asset paths", () => {
+    // After PR #1 we switched from GIF to PNG/WebP. Some animationFile
+    // entries are PNG (static), some are WebP (animated). The narrow assertion
+    // would force a future re-encode to update this test; instead check the
+    // shape: filename is non-empty and ends in a known image extension.
+    const ALLOWED = [".png", ".webp", ".jpg", ".jpeg", ".gif"];
     for (const id of ALL_BADGE_IDS) {
       const def = REGISTRY[id];
-      expect(def.previewFile.endsWith(".png")).toBe(true);
-      expect(def.animationFile.endsWith(".gif")).toBe(true);
+      expect(ALLOWED.some((ext) => def.previewFile.endsWith(ext))).toBe(true);
+      expect(ALLOWED.some((ext) => def.animationFile.endsWith(ext))).toBe(true);
     }
   });
 

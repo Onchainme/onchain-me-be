@@ -25,6 +25,7 @@ beforeEach(() => {
   process.env.SOLANA_RPC_URL = "https://devnet.helius-rpc.com/?api-key=test";
   process.env.MINT_AUTHORITY_PRIVATE_KEY = "placeholder-value";
   process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
+  process.env.CREATOR_ADDRESS = "11111111111111111111111111111113";
   process.env.METADATA_BASE_URL = "https://example.com/metadata";
   // Bust the loadEnv cache so client picks up fresh test env vars
   loadEnv({ reload: true });

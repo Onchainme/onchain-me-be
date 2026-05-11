@@ -25,6 +25,13 @@ const envSchema = z.object({
   COLLECTION_ADDRESS: z.string().min(32).max(64).optional(),
   METADATA_BASE_URL: z.string().url(),
 
+  // Paid-mint config. Mint fees are paid in lamports by the leafOwner (user)
+  // and routed to CREATOR_ADDRESS in the same atomic transaction. Setting
+  // MINT_PRICE_LAMPORTS=0 reverts to fully-sponsored mints (user pays no
+  // price, but is still the fee payer — mint authority stops bleeding SOL).
+  CREATOR_ADDRESS: z.string().min(32).max(64),
+  MINT_PRICE_LAMPORTS: z.coerce.number().int().nonnegative().default(0),
+
   SENTRY_DSN: z.string().refine(
     (v) => v === "" || /^https?:\/\//.test(v),
     { message: "SENTRY_DSN must be empty or a URL" },

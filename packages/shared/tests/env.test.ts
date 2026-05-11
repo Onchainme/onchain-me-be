@@ -27,6 +27,7 @@ describe("loadEnv", () => {
     process.env.MINT_AUTHORITY_PRIVATE_KEY = "placeholder-value";
     process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
     process.env.METADATA_BASE_URL = "https://example.com/metadata";
+    process.env.CREATOR_ADDRESS = "11111111111111111111111111111112";
 
     const env = loadEnv({ reload: true });
 
@@ -50,6 +51,7 @@ describe("loadEnv", () => {
     process.env.MINT_AUTHORITY_PRIVATE_KEY = "placeholder-value";
     process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
     process.env.METADATA_BASE_URL = "https://example.com/metadata";
+    process.env.CREATOR_ADDRESS = "11111111111111111111111111111112";
 
     const env = loadEnv({ reload: true });
 
@@ -72,6 +74,7 @@ describe("loadEnv", () => {
     process.env.MINT_AUTHORITY_PRIVATE_KEY = "placeholder-value";
     process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
     process.env.METADATA_BASE_URL = "https://example.com/metadata";
+    process.env.CREATOR_ADDRESS = "11111111111111111111111111111112";
 
     expect(() => loadEnv({ reload: true })).toThrow(/JWT_SECRET/);
   });
@@ -91,6 +94,7 @@ describe("loadEnv", () => {
     process.env.MINT_AUTHORITY_PRIVATE_KEY = "placeholder-value";
     process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
     process.env.METADATA_BASE_URL = "https://example.com/metadata";
+    process.env.CREATOR_ADDRESS = "11111111111111111111111111111112";
 
     expect(() => loadEnv({ reload: true })).toThrow(/SOLANA_CLUSTER/);
   });

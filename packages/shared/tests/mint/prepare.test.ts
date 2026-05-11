@@ -44,6 +44,10 @@ function setEnv() {
   process.env.HELIUS_WEBHOOK_SECRET = "sec";
   process.env.MERKLE_TREE_ADDRESS = TREE;
   process.env.METADATA_BASE_URL = "https://example.com/metadata";
+  process.env.CREATOR_ADDRESS = "11111111111111111111111111111113";
+  // Tests default to sponsored mode so existing assertions hold; specific tests
+  // override MINT_PRICE_LAMPORTS to exercise the paid path.
+  delete process.env.MINT_PRICE_LAMPORTS;
 
   const authority = Keypair.generate();
   process.env.MINT_AUTHORITY_PRIVATE_KEY = bs58.encode(authority.secretKey);

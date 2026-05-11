@@ -20,6 +20,7 @@ function setEnv() {
   process.env.HELIUS_WEBHOOK_SECRET = "sec";
   process.env.MINT_AUTHORITY_PRIVATE_KEY = "x".repeat(44);
   process.env.MERKLE_TREE_ADDRESS = "11111111111111111111111111111112";
+  process.env.CREATOR_ADDRESS = "11111111111111111111111111111113";
   process.env.METADATA_BASE_URL = "https://example.com/metadata";
   _resetEnvCache();
 }

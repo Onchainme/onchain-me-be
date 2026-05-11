@@ -139,6 +139,34 @@ async function ensureMintAvailable(): Promise<void> {
 }
 
 export const mintRoute: FastifyPluginAsyncZod = async (fastify) => {
+  fastify.get(
+    "/mint/config",
+    {
+      schema: {
+        response: {
+          200: z.object({
+            // Lamports the user pays per mint → goes to creatorAddress in the
+            // same transaction. 0 = sponsored mint (user pays only the tx fee).
+            mintPriceLamports: z.number().int().nonnegative(),
+            // Read-only display field; backend remains the source of truth for
+            // the transfer destination.
+            creatorAddress: z.string(),
+          }),
+        },
+      },
+    },
+    async (_req, reply) => {
+      const env = loadEnv();
+      // Price and creator are deploy-time config — long cache is safe. UI
+      // refetches on cold load.
+      reply.header("Cache-Control", "public, max-age=300");
+      return {
+        mintPriceLamports: env.MINT_PRICE_LAMPORTS,
+        creatorAddress: env.CREATOR_ADDRESS,
+      };
+    },
+  );
+
   fastify.post(
     "/mint/single",
     {

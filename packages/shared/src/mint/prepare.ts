@@ -3,8 +3,14 @@ import {
   mintV1,
   TokenProgramVersion,
 } from "@metaplex-foundation/mpl-bubblegum";
-import { publicKey, type Umi } from "@metaplex-foundation/umi";
+import {
+  createNoopSigner,
+  lamports as umiLamports,
+  publicKey,
+  type Umi,
+} from "@metaplex-foundation/umi";
 import { base64 } from "@metaplex-foundation/umi/serializers";
+import { transferSol } from "@metaplex-foundation/mpl-toolbox";
 import { loadEnv } from "../env.js";
 import { createUmiClient } from "../solana/umi.js";
 import { mintAuthorityPublicKey } from "../solana/keypair.js";
@@ -100,8 +106,17 @@ async function buildAndPartialSign(
   const leafOwner = publicKey(leafOwnerB58);
   const metadata = toMetadataArgsArgs(badgeId);
 
+  // Paid-mint pattern:
+  //   - The leafOwner (user) is the fee payer AND signs the transfer ix.
+  //   - umi.identity (mint authority) only co-signs the Bubblegum tree-authority
+  //     check; it pays no SOL. This makes minting a revenue stream rather than
+  //     a recurring expense.
+  // When MINT_PRICE_LAMPORTS=0 we skip the transfer ix entirely — user is still
+  // the fee payer (≈ 5000 lamports / mint) but pays no price.
+  const userSigner = createNoopSigner(leafOwner);
+
   const collection = env.COLLECTION_ADDRESS;
-  const builder = collection
+  const mintBuilder = collection
     ? mintToCollectionV1(umi, {
         leafOwner,
         merkleTree: tree,
@@ -114,10 +129,20 @@ async function buildAndPartialSign(
         metadata,
       });
 
+  const combined =
+    env.MINT_PRICE_LAMPORTS > 0
+      ? transferSol(umi, {
+          source: userSigner,
+          destination: publicKey(env.CREATOR_ADDRESS),
+          amount: umiLamports(env.MINT_PRICE_LAMPORTS),
+        }).add(mintBuilder)
+      : mintBuilder;
+
   // Fetch blockhash via globalThis.fetch so MSW can intercept it in tests
   // (web3.js captures globalThis.fetch at module-load time, before MSW patches it).
   const { blockhash, lastValidBlockHeight } = await fetchLatestBlockhash(rpcUrl);
-  const builtTx = builder
+  const builtTx = combined
+    .setFeePayer(userSigner)
     .setBlockhash({ blockhash, lastValidBlockHeight })
     .build(umi);
 
