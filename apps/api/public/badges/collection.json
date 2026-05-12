@@ -1,0 +1,13 @@
+{
+  "name": "OnchainMe Badges",
+  "symbol": "OCM",
+  "description": "Compressed NFT badges representing real on-chain activity across Solana DeFi protocols — Jupiter swap volume, Pump.fun trades, Orca/Meteora LP positions, and the Solana Mobile Seeker Genesis Token. Earned by activity, minted by the wallet that earned them.",
+  "image": "https://api.onchainme.to/badges/cat.png",
+  "external_url": "https://onchainme.to",
+  "properties": {
+    "files": [
+      { "uri": "https://api.onchainme.to/badges/cat.png", "type": "image/png" }
+    ],
+    "category": "image"
+  }
+}
