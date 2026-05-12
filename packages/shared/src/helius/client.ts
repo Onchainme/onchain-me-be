@@ -80,13 +80,16 @@ export async function fetchEnhancedTransactions(opts: FetchTxsOpts): Promise<Hel
 }
 
 /**
- * Pause between paginated Helius requests. Helius free tier advertises 10 RPS,
- * but Cloudflare's burst detection trips at much lower rates if requests come
- * from the same TCP connection (which Node's fetch reuses via undici). 250ms
- * caps us at 4 RPS, well under the burst threshold, and adds at most 12 seconds
- * to a full 5000-tx scan — acceptable for a once-per-user-click flow.
+ * Pause between paginated Helius requests. Helius's documented "10 RPS" is
+ * actually a token bucket — empirically (`curl` from a fresh IP), the bucket
+ * holds ~10-15 tokens and refills at ~2 tokens/sec. Bursting 10 requests works
+ * once, then the bucket is dry and even 4 RPS sustained eventually 429s.
+ * 500ms = 2 RPS hits the refill rate exactly and tested clean on 20/20
+ * sequential requests. Cost on a 5000-tx full scan is +25 seconds, which is
+ * acceptable for a once-per-user-click flow that's gated behind the
+ * "Update inventory" button (rate-limited to 2/30s on the API).
  */
-const HELIUS_PAGINATION_DELAY_MS = 250;
+const HELIUS_PAGINATION_DELAY_MS = 500;
 
 export async function fetchAllTransactionsCappedAt(
   wallet: string,
