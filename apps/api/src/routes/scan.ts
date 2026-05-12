@@ -54,6 +54,23 @@ export const scanRoute: FastifyPluginAsyncZod = async (fastify) => {
       const { wallet } = req.params;
       const { mode } = req.query;
 
+      // Server-side dedup: a wallet already has an active scan in BullMQ — return
+      // the same jobId instead of spinning up a duplicate. Without this, a double
+      // click on "Update inventory" creates two jobs that fight over Helius
+      // rate limits and both fail. Stale "running" rows older than 10 minutes
+      // are ignored — those are dead jobs awaiting a worker restart cleanup.
+      const RUNNING_TTL_MS = 10 * 60 * 1000;
+      const existing = await models.ScanJob.findOne({
+        walletAddress: wallet,
+        status: { $in: ["queued", "running"] },
+        startedAt: { $gte: new Date(Date.now() - RUNNING_TTL_MS) },
+      })
+        .sort({ startedAt: -1 })
+        .lean();
+      if (existing) {
+        return reply.code(202).send({ jobId: existing._id.toString() });
+      }
+
       const scanJobDoc = await models.ScanJob.create({
         _id: new Types.ObjectId(),
         walletAddress: wallet,
@@ -68,8 +85,14 @@ export const scanRoute: FastifyPluginAsyncZod = async (fastify) => {
         { walletAddress: wallet, mode, scanJobId: scanJobIdStr },
         {
           jobId: scanJobIdStr,
-          attempts: mode === "full" ? 3 : 5,
-          backoff: { type: "exponential", delay: mode === "full" ? 8000 : 4000 },
+          // 3 attempts is enough — Helius free-tier 429s typically clear within
+          // ~30s of backoff. Longer chains just stretch the failure window
+          // without changing the outcome.
+          attempts: 3,
+          // 30s base × exponential = 30s → 60s → 120s of recovery time before
+          // re-attempt. The previous 4-8s base barely outlasted Cloudflare's
+          // sliding-window throttle, so retries hit the same wall.
+          backoff: { type: "exponential", delay: 30_000 },
         },
       );
 

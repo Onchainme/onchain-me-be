@@ -1,6 +1,6 @@
 import { pino } from "pino";
-import { captureException, closeDb, closeRedis, createQueue, createWorker, getRedisConnection, initSentry, loadEnv, QUEUE_NAMES } from "@onchainme/shared";
-import { scanWalletProcessor } from "./jobs/scanWallet.js";
+import { captureException, closeDb, closeRedis, connectDb, createQueue, createWorker, getRedisConnection, initSentry, loadEnv, models, QUEUE_NAMES } from "@onchainme/shared";
+import { scanWalletProcessor, type ScanWalletJobData } from "./jobs/scanWallet.js";
 import { checkBalanceProcessor } from "./jobs/checkBalance.js";
 
 async function main(): Promise<void> {
@@ -37,9 +37,36 @@ async function main(): Promise<void> {
   // limits even when 5+ users mash "Update inventory" at once.
   const scanWorker = createWorker(QUEUE_NAMES.scan, scanWalletProcessor, 1);
   scanWorker.on("ready", () => log.info("scanWallet worker registered"));
-  scanWorker.on("failed", (job, err) => {
+  scanWorker.on("failed", async (job, err) => {
     log.error({ jobId: job?.id, err }, "scanWallet job failed");
     captureException(err, { jobId: job?.id, queue: "scan" });
+    // BullMQ fires "failed" both for intermediate attempt failures AND for
+    // the final give-up. Only flip Mongo to "failed" on the final one — if
+    // attemptsMade < attempts there's still a retry coming and we'd lie to
+    // the frontend by saying it's done.
+    const finished =
+      !!job && job.attemptsMade >= (job.opts.attempts ?? 1);
+    if (finished) {
+      const data = job?.data as ScanWalletJobData | undefined;
+      if (data?.scanJobId) {
+        try {
+          await connectDb();
+          await models.ScanJob.updateOne(
+            { _id: data.scanJobId, status: "running" },
+            {
+              $set: {
+                status: "failed",
+                finishedAt: new Date(),
+                error: err.message,
+              },
+            },
+          );
+          log.info({ jobId: job?.id, scanJobId: data.scanJobId }, "scanJob marked failed");
+        } catch (markErr) {
+          log.error({ markErr, jobId: job?.id }, "failed to mark scanJob as failed");
+        }
+      }
+    }
   });
   log.info("worker ready (scanWallet + checkBalance processors registered)");
 
