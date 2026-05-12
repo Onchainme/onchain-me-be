@@ -39,6 +39,16 @@ export interface BuildMintResult {
  */
 function toMetadataArgsArgs(badgeId: string): MetadataArgsArgs {
   const m = buildMetadataArgs(badgeId);
+  const env = loadEnv();
+  // When a collection mint is configured, Bubblegum's mintToCollectionV1
+  // requires the leaf metadata to carry a `collection: { key, verified: false }`
+  // field. Without it the program returns error 6021 "CollectionNotFound on
+  // Metadata" before it even tries to look up the collection account. The
+  // tree-authority + collection-authority cosigning (both = umi.identity)
+  // flip `verified` to true post-mint.
+  const collection = env.COLLECTION_ADDRESS
+    ? { key: publicKey(env.COLLECTION_ADDRESS), verified: false }
+    : null;
   return {
     name: m.name,
     symbol: m.symbol,
@@ -46,15 +56,10 @@ function toMetadataArgsArgs(badgeId: string): MetadataArgsArgs {
     sellerFeeBasisPoints: m.sellerFeeBasisPoints,
     primarySaleHappened: m.primarySaleHappened,
     isMutable: m.isMutable,
-    // MetadataArgsArgs accepts OptionOrNullable<number> → null is fine for editionNonce
     editionNonce: null,
-    // MetadataArgsArgs accepts OptionOrNullable<TokenStandardArgs> → null = no standard
     tokenStandard: null,
-    // MetadataArgsArgs accepts OptionOrNullable<CollectionArgs> → null = no collection
-    collection: null,
-    // MetadataArgsArgs accepts OptionOrNullable<UsesArgs> → null = no uses
+    collection,
     uses: null,
-    // TokenProgramVersion enum: Original = 0
     tokenProgramVersion: TokenProgramVersion.Original,
     creators: [],
   };

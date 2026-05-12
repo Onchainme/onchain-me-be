@@ -9,6 +9,7 @@ import {
   fetchTransactionStatus,
   getAssetsByOwner,
   isMintDegraded,
+  isOnchainBackfillDisabled,
   loadEnv,
   models,
   REGISTRY,
@@ -117,6 +118,13 @@ async function ensureClaimable(wallet: string, badgeId: string): Promise<void> {
 
   // Defense-in-depth: scan on-chain. Catches DB-only resets that would
   // otherwise let a wallet mint duplicates of the same badge.
+  //
+  // The DAS check can be temporarily disabled via the admin toggle so QA can
+  // re-mint after a DB wipe. The flag carries a Redis TTL — it auto-expires
+  // back to "enabled" so we don't accidentally leave duplicate-mint open.
+  if (await isOnchainBackfillDisabled()) {
+    return;
+  }
   const env = loadEnv();
   const onChainHit = await backfillFromOnChain(wallet, badgeId, env.MERKLE_TREE_ADDRESS);
   if (onChainHit) {
