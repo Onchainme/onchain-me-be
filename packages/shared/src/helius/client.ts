@@ -79,6 +79,15 @@ export async function fetchEnhancedTransactions(opts: FetchTxsOpts): Promise<Hel
   return parsed.data;
 }
 
+/**
+ * Pause between paginated Helius requests. Helius free tier advertises 10 RPS,
+ * but Cloudflare's burst detection trips at much lower rates if requests come
+ * from the same TCP connection (which Node's fetch reuses via undici). 250ms
+ * caps us at 4 RPS, well under the burst threshold, and adds at most 12 seconds
+ * to a full 5000-tx scan — acceptable for a once-per-user-click flow.
+ */
+const HELIUS_PAGINATION_DELAY_MS = 250;
+
 export async function fetchAllTransactionsCappedAt(
   wallet: string,
   cap: number,
@@ -86,8 +95,16 @@ export async function fetchAllTransactionsCappedAt(
 ): Promise<HeliusEnhancedTx[]> {
   const out: HeliusEnhancedTx[] = [];
   let before: string | undefined = undefined;
+  let isFirstPage = true;
 
   while (out.length < cap) {
+    // Throttle between pages, but skip the delay before the very first request
+    // so a 1-page scan stays snappy.
+    if (!isFirstPage) {
+      await new Promise((r) => setTimeout(r, HELIUS_PAGINATION_DELAY_MS));
+    }
+    isFirstPage = false;
+
     const batch = await fetchEnhancedTransactions({
       wallet,
       ...(before !== undefined ? { before } : {}),
