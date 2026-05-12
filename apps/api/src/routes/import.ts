@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   ALL_BADGE_IDS,
   getAssetsByOwner,
+  isOnchainBackfillDisabled,
   loadEnv,
   models,
   REGISTRY,
@@ -75,6 +76,20 @@ export const importRoute: FastifyPluginAsyncZod = async (fastify) => {
     async (req) => {
       const env = loadEnv();
       const wallet = (req.user as { wallet: string }).wallet;
+
+      // Same toggle that ungates duplicate mints during QA also ungates this
+      // import endpoint. Otherwise the frontend's auto-call on connect would
+      // immediately re-create BadgeClaim rows from on-chain cNFTs, defeating
+      // the toggle and putting the user right back into "already claimed".
+      if (await isOnchainBackfillDisabled()) {
+        return {
+          imported: 0,
+          badgeIds: [],
+          skipped: 0,
+          assetsScanned: 0,
+          scoreDelta: 0,
+        };
+      }
 
       const assets = await getAssetsByOwner(wallet);
 
