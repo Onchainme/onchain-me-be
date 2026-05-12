@@ -129,6 +129,15 @@ async function ensureClaimable(wallet: string, badgeId: string): Promise<void> {
 }
 
 async function ensureMintAvailable(): Promise<void> {
+  // In paid-mint mode the leafOwner (user) is the fee payer — the mint
+  // authority only signs the Bubblegum tree-authority check, which costs
+  // nothing. The degraded check exists for sponsored mode where the mint
+  // authority paid every tx fee and could literally run out. Skip the gate
+  // entirely once MINT_PRICE_LAMPORTS is set, otherwise low post-tree balance
+  // (we burn 0.677 SOL on tree creation, leaving ~0.02 SOL of unused dust)
+  // permanently disables minting for no real reason.
+  const env = loadEnv();
+  if (env.MINT_PRICE_LAMPORTS > 0) return;
   if (await isMintDegraded()) {
     throw new AppError({
       code: ErrorCode.MINT_AUTHORITY_OUT_OF_FUNDS,
