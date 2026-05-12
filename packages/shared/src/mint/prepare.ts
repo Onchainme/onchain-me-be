@@ -135,13 +135,24 @@ async function buildAndPartialSign(
         payer: userSigner,
       });
 
+  // Order instructions [mintV1, transferSol]:
+  //   - Solscan/Solscan-like explorers classify the tx by the first
+  //     "interesting" instruction. With transfer first you get "Send" in the
+  //     history; with mint first you get "Mint" / "NFT Mint", which is what
+  //     users expect to see.
+  //   - Phantom's transaction history uses the same heuristic, so leading
+  //     with mintV1 also improves how the activity shows up in-wallet.
+  //   - Atomicity is unchanged — both ix in one tx, either both succeed or
+  //     neither does. The transfer can't be skipped after a successful mint.
   const combined =
     env.MINT_PRICE_LAMPORTS > 0
-      ? transferSol(umi, {
-          source: userSigner,
-          destination: publicKey(env.CREATOR_ADDRESS),
-          amount: umiLamports(env.MINT_PRICE_LAMPORTS),
-        }).add(mintBuilder)
+      ? mintBuilder.add(
+          transferSol(umi, {
+            source: userSigner,
+            destination: publicKey(env.CREATOR_ADDRESS),
+            amount: umiLamports(env.MINT_PRICE_LAMPORTS),
+          }),
+        )
       : mintBuilder;
 
   // Fetch blockhash via globalThis.fetch so MSW can intercept it in tests
