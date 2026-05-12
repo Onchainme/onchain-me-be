@@ -12,6 +12,7 @@ import { statsRoute } from "./stats.js";
 import { metadataRoute } from "./metadata.js";
 import { devRoute } from "./dev.js";
 import { importRoute } from "./import.js";
+import { solanaRoute } from "./solana.js";
 
 export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(async (api) => {
@@ -28,5 +29,6 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
     await api.register(metadataRoute);
     await api.register(devRoute);
     await api.register(importRoute);
+    await api.register(solanaRoute);
   }, { prefix: "/api/v1" });
 };
