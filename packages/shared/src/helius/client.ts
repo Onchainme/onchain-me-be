@@ -11,6 +11,15 @@ export interface FetchTxsOpts {
   limit?: number;
 }
 
+/**
+ * Sentinel class used so withRetry can distinguish "don't retry, propagate"
+ * from transient errors. Currently used for 429s — burning local retries
+ * against a rate-limit response just makes the limit worse, and BullMQ's
+ * outer `attempts`+`backoff` (4-8s exponential delay) is the right place to
+ * pace re-attempts.
+ */
+class NonRetryableHeliusError extends AppError {}
+
 async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 500): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -18,6 +27,9 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
       return await fn();
     } catch (err) {
       lastErr = err;
+      // 429 means we're hitting Helius too hard right now — local retries
+      // would just compound the problem. Bubble up to BullMQ immediately.
+      if (err instanceof NonRetryableHeliusError) throw err;
       if (i < attempts - 1) {
         await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** i));
       }
@@ -37,7 +49,9 @@ export async function fetchEnhancedTransactions(opts: FetchTxsOpts): Promise<Hel
   const json = await withRetry(async () => {
     const res = await fetch(url.toString(), { method: "GET" });
     if (res.status === 429) {
-      throw new AppError({
+      // NonRetryableHeliusError skips withRetry's exp-backoff and lets BullMQ's
+      // job-level attempts:3/5 + 4-8s exponential backoff pace the retry.
+      throw new NonRetryableHeliusError({
         code: ErrorCode.HELIUS_UNAVAILABLE,
         message: "Helius rate-limited (429)",
         statusCode: 503,

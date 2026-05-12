@@ -29,7 +29,13 @@ async function main(): Promise<void> {
   }
   log.info("redis ready");
 
-  const scanWorker = createWorker(QUEUE_NAMES.scan, scanWalletProcessor, 2);
+  // Concurrency 1: two scans in parallel both hit the same Helius API key
+  // and on the free tier (10 req/s, ~100k credits/mo) any burst trips a 429
+  // that snowballs through BullMQ retries. Serializing scans cuts the burst
+  // surface in half — combined with the non-retryable 429 path in
+  // packages/shared/src/helius/client.ts, this keeps us inside free-tier
+  // limits even when 5+ users mash "Update inventory" at once.
+  const scanWorker = createWorker(QUEUE_NAMES.scan, scanWalletProcessor, 1);
   scanWorker.on("ready", () => log.info("scanWallet worker registered"));
   scanWorker.on("failed", (job, err) => {
     log.error({ jobId: job?.id, err }, "scanWallet job failed");
