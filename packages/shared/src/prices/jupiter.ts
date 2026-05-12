@@ -1,17 +1,22 @@
 /**
- * Jupiter Price API v6 client.
+ * Jupiter Price API v3 client.
  *
  * Free, no API key. Returns current USD prices for token mints; we use the
  * scan-time price for historical txs as a pragmatic approximation (perfect
  * historical pricing would need Birdeye, which is rate-limited on free tier).
  *
- *   GET https://lite-api.jup.ag/price/v2?ids=<mint1,mint2,...>
+ *   GET https://lite-api.jup.ag/price/v3?ids=<mint1,mint2,...>
  *
  * Up to ~100 mints per call. We cache responses for 60s in-memory to avoid
  * hammering the API when the worker batches a wallet scan.
+ *
+ * Migration note (2026-05): Jupiter deprecated /price/v2 → 404. The v3 endpoint
+ * also changed shape: response is a flat top-level map (no `data` wrapper),
+ * price field renamed `price` → `usdPrice`. See:
+ *   https://station.jup.ag/docs/apis/price-api
  */
 
-const PRICE_API = "https://lite-api.jup.ag/price/v2";
+const PRICE_API = "https://lite-api.jup.ag/price/v3";
 const CACHE_TTL_MS = 60_000;
 const MAX_IDS_PER_CALL = 100;
 
@@ -22,10 +27,15 @@ interface CachedPrice {
 
 const cache = new Map<string, CachedPrice>();
 
-interface JupPriceResponse {
-  data: Record<string, { id: string; type: string; price: string | number } | null>;
-  // older versions also include timeTaken
+interface JupPriceV3Entry {
+  usdPrice: number;
+  decimals: number;
+  blockId?: number;
+  liquidity?: number;
+  priceChange24h?: number;
+  createdAt?: string;
 }
+type JupPriceV3Response = Record<string, JupPriceV3Entry | null>;
 
 async function fetchBatch(mints: string[]): Promise<Record<string, number>> {
   if (mints.length === 0) return {};
@@ -37,12 +47,13 @@ async function fetchBatch(mints: string[]): Promise<Record<string, number>> {
   if (!res.ok) {
     throw new Error(`Jupiter Price API ${res.status}: ${await res.text()}`);
   }
-  const body = (await res.json()) as JupPriceResponse;
+  const body = (await res.json()) as JupPriceV3Response;
   const out: Record<string, number> = {};
   for (const mint of mints) {
-    const entry = body.data[mint];
+    const entry = body[mint];
     if (!entry) continue;
-    const price = typeof entry.price === "number" ? entry.price : Number(entry.price);
+    const price =
+      typeof entry.usdPrice === "number" ? entry.usdPrice : Number(entry.usdPrice);
     if (Number.isFinite(price) && price > 0) out[mint] = price;
   }
   return out;
