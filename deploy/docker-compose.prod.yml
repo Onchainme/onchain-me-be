@@ -98,6 +98,7 @@ services:
         # NEXT_PUBLIC_* values are baked at build time. Read from .env.production.
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
         NEXT_PUBLIC_SOLANA_CLUSTER: ${SOLANA_CLUSTER}
+        NEXT_PUBLIC_SOLANA_RPC_URL: ${NEXT_PUBLIC_SOLANA_RPC_URL}
     expose:
       - "3000"
 
