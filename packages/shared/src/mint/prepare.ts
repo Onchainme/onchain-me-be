@@ -107,12 +107,16 @@ async function buildAndPartialSign(
   const metadata = toMetadataArgsArgs(badgeId);
 
   // Paid-mint pattern:
-  //   - The leafOwner (user) is the fee payer AND signs the transfer ix.
-  //   - umi.identity (mint authority) only co-signs the Bubblegum tree-authority
-  //     check; it pays no SOL. This makes minting a revenue stream rather than
-  //     a recurring expense.
-  // When MINT_PRICE_LAMPORTS=0 we skip the transfer ix entirely — user is still
-  // the fee payer (≈ 5000 lamports / mint) but pays no price.
+  //   - The leafOwner (user) is BOTH the tx-level fee payer AND the
+  //     instruction-level `payer` for Bubblegum. The latter matters: mintV1's
+  //     `payer` slot defaults to umi.identity (= mint authority), so without
+  //     this explicit override the mint authority would still bleed lamports
+  //     for any rent/compute reimbursement the program triggers.
+  //   - umi.identity (mint authority) only co-signs as treeCreatorOrDelegate;
+  //     no SOL leaves it. This makes minting a revenue stream rather than a
+  //     recurring expense.
+  // When MINT_PRICE_LAMPORTS=0 we skip the transfer ix entirely. We still
+  // route `payer: userSigner` so behavior is uniform: user always pays gas.
   const userSigner = createNoopSigner(leafOwner);
 
   const collection = env.COLLECTION_ADDRESS;
@@ -122,11 +126,13 @@ async function buildAndPartialSign(
         merkleTree: tree,
         collectionMint: publicKey(collection),
         metadata,
+        payer: userSigner,
       })
     : mintV1(umi, {
         leafOwner,
         merkleTree: tree,
         metadata,
+        payer: userSigner,
       });
 
   const combined =
