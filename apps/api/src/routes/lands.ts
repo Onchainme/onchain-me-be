@@ -74,6 +74,13 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
                 objectsCount: z.number(),
                 score: z.number(),
                 rank: z.number(),
+                placements: z.array(
+                  z.object({
+                    badgeId: z.string(),
+                    x: z.number(),
+                    y: z.number(),
+                  }),
+                ),
               }),
             ),
             nextCursor: z.string().nullable(),
@@ -115,24 +122,36 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
       const page = users.slice(0, limit);
       const wallets = page.map((u) => u._id as unknown as string);
 
-      const placementCounts = wallets.length
-        ? await models.Placement.aggregate<{ _id: string; count: number }>([
-            { $match: { "_id.walletAddress": { $in: wallets } } },
-            { $group: { _id: "$_id.walletAddress", count: { $sum: 1 } } },
-          ])
+      const placementDocs = wallets.length
+        ? await models.Placement.find({ "_id.walletAddress": { $in: wallets } }).lean()
         : [];
-      const countByWallet = new Map(placementCounts.map((c) => [c._id, c.count]));
+
+      const placementsByWallet = new Map<
+        string,
+        Array<{ badgeId: string; x: number; y: number }>
+      >();
+      for (const p of placementDocs) {
+        const id = p._id as unknown as { walletAddress: string; badgeId: string };
+        const list = placementsByWallet.get(id.walletAddress) ?? [];
+        list.push({ badgeId: id.badgeId, x: p.tileX, y: p.tileY });
+        placementsByWallet.set(id.walletAddress, list);
+      }
 
       const scores = page.map((u) => (u["score"] as number | undefined) ?? 0);
       const ranks = await getRanks(scores);
 
-      const items = page.map((u, i) => ({
-        wallet: u._id as unknown as string,
-        ogImageUrl: u["ogImageUrl"] ?? null,
-        objectsCount: countByWallet.get(u._id as unknown as string) ?? 0,
-        score: scores[i] ?? 0,
-        rank: ranks[i] ?? 0,
-      }));
+      const items = page.map((u, i) => {
+        const wallet = u._id as unknown as string;
+        const placements = placementsByWallet.get(wallet) ?? [];
+        return {
+          wallet,
+          ogImageUrl: u["ogImageUrl"] ?? null,
+          objectsCount: placements.length,
+          score: scores[i] ?? 0,
+          rank: ranks[i] ?? 0,
+          placements,
+        };
+      });
 
       const last = page.at(-1);
       let nextCursor: string | null = null;
