@@ -144,27 +144,25 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
       // Fan-out all per-wallet aggregations in parallel. Placements + tx
       // aggregate are both indexed by walletAddress so each is a single
       // query for the whole page, not N queries.
-      const [placementDocs, txAggDocs] = await Promise.all([
-        wallets.length
-          ? models.Placement.find({ "_id.walletAddress": { $in: wallets } }).lean()
-          : Promise.resolve([] as Awaited<ReturnType<typeof models.Placement.find>>),
-        wallets.length
-          ? models.Tx.aggregate<{
-              _id: string;
-              protocols: string[];
-              transactions: number;
-            }>([
-              { $match: { walletAddress: { $in: wallets } } },
-              {
-                $group: {
-                  _id: "$walletAddress",
-                  protocols: { $addToSet: "$protocol" },
-                  transactions: { $sum: 1 },
-                },
+      const placementDocs = wallets.length
+        ? await models.Placement.find({ "_id.walletAddress": { $in: wallets } }).lean()
+        : [];
+      const txAggDocs = wallets.length
+        ? await models.Tx.aggregate<{
+            _id: string;
+            protocols: string[];
+            transactions: number;
+          }>([
+            { $match: { walletAddress: { $in: wallets } } },
+            {
+              $group: {
+                _id: "$walletAddress",
+                protocols: { $addToSet: "$protocol" },
+                transactions: { $sum: 1 },
               },
-            ])
-          : Promise.resolve([] as Array<{ _id: string; protocols: string[]; transactions: number }>),
-      ]);
+            },
+          ])
+        : [];
 
       const placementsByWallet = new Map<
         string,
