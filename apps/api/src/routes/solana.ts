@@ -21,20 +21,33 @@ import { loadEnv } from "@onchainme/shared";
  * a free general-purpose Solana RPC for the world.
  */
 
+// Read + send methods the mint flow + wallet adapters actually call.
+// `confirmTransaction` polls getSignatureStatuses AND getBlockHeight in a
+// race; missing either left mint stuck on "confirming" until the lastValid
+// blockhash expired client-side and we surfaced a misleading error.
 const ALLOWED_METHODS = new Set([
+  // blockhash / block status
   "getLatestBlockhash",
+  "getRecentBlockhash",
+  "isBlockhashValid",
+  "getBlockHeight",
+  "getSlot",
+  "getEpochInfo",
+  // node health / version (wallet adapters probe these on connect)
+  "getHealth",
+  "getVersion",
+  // account / balance lookups
+  "getAccountInfo",
+  "getMultipleAccounts",
+  "getBalance",
+  "getMinimumBalanceForRentExemption",
+  "getTokenAccountsByOwner",
+  "getTokenAccountBalance",
+  // signature / tx lookup (post-send confirmation, history poll)
   "getSignatureStatuses",
   "getSignaturesForAddress",
   "getTransaction",
-  "getAccountInfo",
-  "getBalance",
-  "getMinimumBalanceForRentExemption",
-  "getRecentBlockhash",
-  "getEpochInfo",
-  "getVersion",
-  "getHealth",
-  "getSlot",
-  "isBlockhashValid",
+  // tx submission + simulation
   "sendTransaction",
   "simulateTransaction",
 ]);
