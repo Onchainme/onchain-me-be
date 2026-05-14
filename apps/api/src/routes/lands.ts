@@ -21,6 +21,11 @@ const landsListQuery = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   sort: sortParam,
+  // Optional sliding window for sort=recent. Number = seconds of lookback
+  // (e.g. 86400 = last 24h). Ignored when sort=score. The frontend's "Newest"
+  // tab defaults to 24h so the home page surfaces actually-recent signups,
+  // not the entire user table sorted by createdAt.
+  withinSec: z.coerce.number().int().positive().max(60 * 60 * 24 * 90).optional(),
 });
 
 interface RecentCursor {
@@ -102,7 +107,7 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
       },
     },
     async (req) => {
-      const { cursor, limit, sort } = req.query;
+      const { cursor, limit, sort, withinSec } = req.query;
       const filter: Record<string, unknown> = {};
       const decoded = cursor ? decodeCursor(cursor) : null;
 
@@ -125,10 +130,17 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
         }
       } else {
         sortSpec = { createdAt: -1, _id: -1 };
+        // Sliding-window cap on "newest". When withinSec is provided, anything
+        // older than (now - withinSec) is excluded. The default lookback comes
+        // from the frontend so we don't bake a policy decision into the API.
+        if (withinSec) {
+          filter.createdAt = { $gte: new Date(Date.now() - withinSec * 1000) };
+        }
         if (decoded?.type === "recent") {
+          const cutoff = new Date(decoded.createdAt);
           filter.$or = [
-            { createdAt: { $lt: new Date(decoded.createdAt) } },
-            { createdAt: new Date(decoded.createdAt), _id: { $lt: decoded.wallet } },
+            { createdAt: { $lt: cutoff } },
+            { createdAt: cutoff, _id: { $lt: decoded.wallet } },
           ];
         }
       }
