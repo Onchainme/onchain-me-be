@@ -33,7 +33,11 @@ export const statsRoute: FastifyPluginAsyncZod = async (fastify) => {
         models.Placement.estimatedDocumentCount(),
       ]);
 
-      reply.header("Cache-Control", "public, max-age=30");
+      // 5-min cache: Hero "LANDS MINTED" + LandingStats are the only consumers
+      // and neither needs second-by-second accuracy. Matches the frontend's
+      // `next: { revalidate: 300 }` so SSR + edge cache stay in sync.
+      // `s-maxage` keeps Caddy/CDN honest if we ever drop one in front.
+      reply.header("Cache-Control", "public, max-age=300, s-maxage=300");
       return { totalMinted, mintedToday, totalUsers, totalPlacements };
     },
   );
