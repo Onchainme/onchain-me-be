@@ -74,6 +74,19 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
                 objectsCount: z.number(),
                 score: z.number(),
                 rank: z.number(),
+                // Nested stats mirror /lands/:wallet exactly so the frontend
+                // can render the same card layout in the grid as in the
+                // single-land view (transactions, distinct protocols, etc.)
+                // without a second per-card fetch. `score` + `rank` are also
+                // exposed as flat sibling fields above for backwards
+                // compatibility with the existing toLandSummary mapping —
+                // we'll consolidate once the frontend has fully migrated.
+                stats: z.object({
+                  protocols: z.number(),
+                  transactions: z.number(),
+                  score: z.number(),
+                  rank: z.number(),
+                }),
                 placements: z.array(
                   z.object({
                     badgeId: z.string(),
@@ -128,9 +141,30 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
       const page = users.slice(0, limit);
       const wallets = page.map((u) => u._id as unknown as string);
 
-      const placementDocs = wallets.length
-        ? await models.Placement.find({ "_id.walletAddress": { $in: wallets } }).lean()
-        : [];
+      // Fan-out all per-wallet aggregations in parallel. Placements + tx
+      // aggregate are both indexed by walletAddress so each is a single
+      // query for the whole page, not N queries.
+      const [placementDocs, txAggDocs] = await Promise.all([
+        wallets.length
+          ? models.Placement.find({ "_id.walletAddress": { $in: wallets } }).lean()
+          : Promise.resolve([] as Awaited<ReturnType<typeof models.Placement.find>>),
+        wallets.length
+          ? models.Tx.aggregate<{
+              _id: string;
+              protocols: string[];
+              transactions: number;
+            }>([
+              { $match: { walletAddress: { $in: wallets } } },
+              {
+                $group: {
+                  _id: "$walletAddress",
+                  protocols: { $addToSet: "$protocol" },
+                  transactions: { $sum: 1 },
+                },
+              },
+            ])
+          : Promise.resolve([] as Array<{ _id: string; protocols: string[]; transactions: number }>),
+      ]);
 
       const placementsByWallet = new Map<
         string,
@@ -143,18 +177,38 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
         placementsByWallet.set(id.walletAddress, list);
       }
 
+      // Same shape as /lands/:wallet's stats block. Wallets with no Tx
+      // documents (e.g. fresh users who haven't been scanned yet) get
+      // protocols=0 / transactions=0 implicitly.
+      const statsByWallet = new Map<string, { protocols: number; transactions: number }>();
+      for (const row of txAggDocs) {
+        statsByWallet.set(row._id, {
+          protocols: row.protocols.length,
+          transactions: row.transactions,
+        });
+      }
+
       const scores = page.map((u) => (u["score"] as number | undefined) ?? 0);
       const ranks = await getRanks(scores);
 
       const items = page.map((u, i) => {
         const wallet = u._id as unknown as string;
         const placements = placementsByWallet.get(wallet) ?? [];
+        const txStats = statsByWallet.get(wallet) ?? { protocols: 0, transactions: 0 };
+        const score = scores[i] ?? 0;
+        const rank = ranks[i] ?? 0;
         return {
           wallet,
           ogImageUrl: u["ogImageUrl"] ?? null,
           objectsCount: placements.length,
-          score: scores[i] ?? 0,
-          rank: ranks[i] ?? 0,
+          score,
+          rank,
+          stats: {
+            protocols: txStats.protocols,
+            transactions: txStats.transactions,
+            score,
+            rank,
+          },
           placements,
         };
       });
