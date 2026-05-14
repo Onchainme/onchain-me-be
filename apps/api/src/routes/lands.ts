@@ -98,6 +98,12 @@ export const landsRoute: FastifyPluginAsyncZod = async (fastify) => {
       let sortSpec: Record<string, 1 | -1>;
       if (sort === "score") {
         sortSpec = { score: -1, _id: 1 };
+        // Exclude unranked users from the leaderboard sort. Without this every
+        // freshly-logged-in wallet with score=0 shows up in the grid, gets a
+        // rank=0 sentinel (frontend hides the badge), and looks like a broken
+        // entry. They're still visible under sort=recent which is the right
+        // place for them.
+        filter.score = { $gt: 0 };
         if (decoded?.type === "score") {
           filter.$or = [
             { score: { $lt: decoded.score } },
