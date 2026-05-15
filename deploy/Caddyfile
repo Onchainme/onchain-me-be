@@ -32,8 +32,13 @@ app.{$DOMAIN} {
 	reverse_proxy frontend:3000
 }
 
-# Optional bare-domain redirect to the app subdomain. Comment out if you serve
-# something else on the apex (e.g. a marketing page).
+# Apex serves the marketing landing. Both apex and app.<domain> fan into the
+# same frontend container; src/proxy.ts (gated by
+# NEXT_PUBLIC_ENABLE_DOMAIN_SPLIT) does the host-based split — apex keeps `/`
+# (landing) and 308s every other path to app.<domain>, while app.<domain>
+# 308s `/` to /home. Caddy must NOT redirect here anymore or the landing
+# would never be reachable.
 {$DOMAIN} {
-	redir https://app.{$DOMAIN}{uri}
+	encode zstd gzip
+	reverse_proxy frontend:3000
 }
