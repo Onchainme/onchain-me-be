@@ -85,14 +85,12 @@ export const scanRoute: FastifyPluginAsyncZod = async (fastify) => {
         { walletAddress: wallet, mode, scanJobId: scanJobIdStr },
         {
           jobId: scanJobIdStr,
-          // 3 attempts is enough — Helius free-tier 429s typically clear within
-          // ~30s of backoff. Longer chains just stretch the failure window
-          // without changing the outcome.
+          // 3 attempts is plenty. On the Developer plan (50 RPS) a 429 is
+          // rare and transient rather than the sustained free-tier wall, so
+          // a tight 10s → 20s → 40s exponential backoff recovers fast instead
+          // of stretching a failed scan over 3+ minutes like the old 30s base.
           attempts: 3,
-          // 30s base × exponential = 30s → 60s → 120s of recovery time before
-          // re-attempt. The previous 4-8s base barely outlasted Cloudflare's
-          // sliding-window throttle, so retries hit the same wall.
-          backoff: { type: "exponential", delay: 30_000 },
+          backoff: { type: "exponential", delay: 10_000 },
         },
       );
 

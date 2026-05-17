@@ -80,16 +80,18 @@ export async function fetchEnhancedTransactions(opts: FetchTxsOpts): Promise<Hel
 }
 
 /**
- * Pause between paginated Helius requests. Helius's documented "10 RPS" is
- * actually a token bucket — empirically (`curl` from a fresh IP), the bucket
- * holds ~10-15 tokens and refills at ~2 tokens/sec. Bursting 10 requests works
- * once, then the bucket is dry and even 4 RPS sustained eventually 429s.
- * 500ms = 2 RPS hits the refill rate exactly and tested clean on 20/20
- * sequential requests. Cost on a 5000-tx full scan is +25 seconds, which is
- * acceptable for a once-per-user-click flow that's gated behind the
- * "Update inventory" button (rate-limited to 2/30s on the API).
+ * Pause between paginated Helius requests.
+ *
+ * Free tier was a ~2 RPS token bucket → we had to crawl at 500ms/page.
+ * On the Developer plan the cap is 50 RPS per API key (shared across
+ * Enhanced API + DAS + RPC). 150ms ≈ 6.7 RPS per scan; with worker
+ * concurrency 2 that's ~13 RPS peak from scans, leaving ~35 RPS headroom
+ * for DAS imports + mint RPC + bursts. A 5000-tx full scan drops from
+ * ~25s to ~7.5s. If the box/plan changes, retune alongside worker
+ * concurrency (apps/worker/src/worker.ts) — the product
+ * concurrency × (1000/this) must stay comfortably under 50.
  */
-const HELIUS_PAGINATION_DELAY_MS = 500;
+const HELIUS_PAGINATION_DELAY_MS = 150;
 
 export async function fetchAllTransactionsCappedAt(
   wallet: string,
