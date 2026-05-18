@@ -39,6 +39,29 @@ export async function buildServer(): Promise<FastifyInstance> {
   // Serve badge GIF/PNG assets directly from disk. In dev tsc emits to
   // apps/api/dist/, so the public dir sits one level up at apps/api/public.
   // In Docker we COPY the same public/ tree into /app/apps/api/public.
+  // Public, credential-less static art. The global corsPlugin echoes the
+  // request Origin + sets `credentials: true` + `Vary: Origin`, while the
+  // file is `Cache-Control: public, max-age=1h`. A per-Origin credentialed
+  // long-cached response is fragile: a copy cached for one origin (or for a
+  // no-Origin prefetch, which gets NO ACAO) replays for another origin and
+  // the browser blocks the canvas texture fetch ("CORS Allow Origin Not
+  // Matching Origin"). Badge images need no cookies, so we serve them with a
+  // flat wildcard so the response is byte-identical for every origin and
+  // structurally immune to the origin/cache-key mismatch.
+  //
+  // This must run AFTER corsPlugin's own onSend (which echoes the Origin).
+  // fastify onSend hooks fire in registration order, so registering this
+  // hook here — after `app.register(corsPlugin)` above — guarantees we get
+  // the final word on the CORS headers for /badges responses.
+  app.addHook("onSend", (req, reply, payload, done) => {
+    if (req.url.startsWith("/badges/")) {
+      reply.header("Access-Control-Allow-Origin", "*");
+      reply.removeHeader("Access-Control-Allow-Credentials");
+      reply.removeHeader("Vary");
+    }
+    done(null, payload);
+  });
+
   const publicRoot = path.resolve(__dirname, "..", "public");
   await app.register(fastifyStatic, {
     root: publicRoot,
@@ -46,23 +69,6 @@ export async function buildServer(): Promise<FastifyInstance> {
     decorateReply: false,
     cacheControl: true,
     maxAge: "1h",
-    setHeaders(res) {
-      // Public, credential-less static art. The global corsPlugin echoes the
-      // request Origin + sets `credentials: true` + `Vary: Origin`, which
-      // makes a `public, max-age=1h` response per-origin and fragile: a copy
-      // cached for one origin (or for a no-Origin prefetch) replays with the
-      // wrong / missing ACAO and the browser blocks the canvas texture load
-      // ("CORS Allow Origin Not Matching Origin"). Badge images need no
-      // cookies, so override with a wildcard: identical for every origin →
-      // safely cacheable, immune to the Origin/cache-key mismatch. Strip the
-      // credentials header (illegal alongside `*`) and the now-pointless Vary.
-      // @fastify/static's SetHeadersResponse type only exposes setHeader, but
-      // the runtime object is a Node ServerResponse — cast for removeHeader.
-      const raw = res as unknown as import("node:http").ServerResponse;
-      raw.setHeader("Access-Control-Allow-Origin", "*");
-      raw.removeHeader("Access-Control-Allow-Credentials");
-      raw.removeHeader("Vary");
-    },
   });
 
   await app.register(authPlugin);
