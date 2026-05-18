@@ -46,6 +46,23 @@ export async function buildServer(): Promise<FastifyInstance> {
     decorateReply: false,
     cacheControl: true,
     maxAge: "1h",
+    setHeaders(res) {
+      // Public, credential-less static art. The global corsPlugin echoes the
+      // request Origin + sets `credentials: true` + `Vary: Origin`, which
+      // makes a `public, max-age=1h` response per-origin and fragile: a copy
+      // cached for one origin (or for a no-Origin prefetch) replays with the
+      // wrong / missing ACAO and the browser blocks the canvas texture load
+      // ("CORS Allow Origin Not Matching Origin"). Badge images need no
+      // cookies, so override with a wildcard: identical for every origin →
+      // safely cacheable, immune to the Origin/cache-key mismatch. Strip the
+      // credentials header (illegal alongside `*`) and the now-pointless Vary.
+      // @fastify/static's SetHeadersResponse type only exposes setHeader, but
+      // the runtime object is a Node ServerResponse — cast for removeHeader.
+      const raw = res as unknown as import("node:http").ServerResponse;
+      raw.setHeader("Access-Control-Allow-Origin", "*");
+      raw.removeHeader("Access-Control-Allow-Credentials");
+      raw.removeHeader("Vary");
+    },
   });
 
   await app.register(authPlugin);
